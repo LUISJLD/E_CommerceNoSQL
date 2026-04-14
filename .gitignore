@@ -1,0 +1,22 @@
+# Ignore Python bytecode files
+*.pyc
+__pycache__/    
+
+# Ignore environment variables files
+.env
+venv/
+
+# Django stuff:
+*.log
+*.pot
+*.pyc
+__pycache__/
+local_settings.py
+/staticfiles/
+
+
+# VSCode settings
+.vscode/
+
+# Ignnore migration files
+*/migrations/
