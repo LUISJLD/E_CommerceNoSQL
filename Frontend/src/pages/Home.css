@@ -1,0 +1,163 @@
+.home { display: flex; flex-direction: column; gap: 48px; }
+
+/* Hero */
+.home__hero {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 48px;
+  position: relative;
+  overflow: hidden;
+}
+.home__hero::before {
+  content: '';
+  position: absolute; inset: 0;
+  background: radial-gradient(ellipse at 20% 50%, rgba(79,110,247,0.08) 0%, transparent 60%);
+  pointer-events: none;
+}
+.home__hero-tag {
+  font-family: var(--font-display);
+  font-size: 10px; font-weight: 700;
+  letter-spacing: 0.15em; text-transform: uppercase;
+  color: var(--accent);
+  border: 1px solid rgba(79,110,247,0.3);
+  background: rgba(79,110,247,0.08);
+  display: inline-block;
+  padding: 4px 12px; border-radius: 20px;
+  margin-bottom: 20px;
+}
+.home__title {
+  font-family: var(--font-display);
+  font-size: 42px; font-weight: 700;
+  letter-spacing: 0.04em;
+  color: var(--text-primary);
+  margin-bottom: 16px;
+}
+.home__desc {
+  font-size: 15px;
+  color: var(--text-secondary);
+  line-height: 1.7;
+  max-width: 520px;
+  margin-bottom: 28px;
+}
+.home__cta {
+  display: inline-flex; align-items: center; gap: 10px;
+  padding: 12px 28px;
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  border-radius: var(--radius-sm);
+  font-family: var(--font-display);
+  font-size: 12px; font-weight: 700;
+  letter-spacing: 0.08em; text-transform: uppercase;
+  transition: all 0.2s;
+}
+.home__cta:hover {
+  background: #6280ff;
+  box-shadow: 0 0 24px var(--accent-glow);
+  transform: translateY(-1px);
+}
+
+/* Sections */
+.home__section { display: flex; flex-direction: column; gap: 20px; }
+.home__section-title {
+  font-family: var(--font-display);
+  font-size: 18px; font-weight: 700;
+  letter-spacing: 0.06em;
+  display: flex; align-items: center; gap: 14px;
+}
+.home__section-tag {
+  font-size: 9px; font-weight: 700;
+  letter-spacing: 0.12em; text-transform: uppercase;
+  color: var(--accent);
+  background: var(--accent-dim);
+  border: 1px solid rgba(79,110,247,0.25);
+  padding: 3px 10px; border-radius: 20px;
+}
+
+/* Access Pattern Cards */
+.home__patterns {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 14px;
+}
+.ap-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--c, var(--accent));
+  border-radius: var(--radius-md);
+  padding: 18px;
+  display: flex; flex-direction: column; gap: 8px;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+.ap-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+}
+.ap-card__id {
+  font-family: var(--font-display);
+  font-size: 10px; font-weight: 700;
+  letter-spacing: 0.12em;
+  color: var(--c, var(--accent));
+}
+.ap-card__label {
+  font-family: var(--font-display);
+  font-size: 13px; font-weight: 700;
+  color: var(--text-primary);
+}
+.ap-card__query {
+  font-family: 'Courier New', monospace;
+  font-size: 10px;
+  color: var(--text-secondary);
+  background: var(--bg-void);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 6px 8px;
+  line-height: 1.6;
+}
+.ap-card__op {
+  font-family: var(--font-display);
+  font-size: 9px; font-weight: 700;
+  letter-spacing: 0.1em; text-transform: uppercase;
+  color: var(--c, var(--accent));
+  margin-top: 2px;
+}
+
+/* Keys Table */
+.home__table-wrap {
+  overflow-x: auto;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+}
+.home__table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+.home__table thead {
+  background: var(--bg-card);
+}
+.home__table th {
+  padding: 12px 16px;
+  text-align: left;
+  font-family: var(--font-display);
+  font-size: 10px; font-weight: 700;
+  letter-spacing: 0.1em; text-transform: uppercase;
+  color: var(--text-secondary);
+  border-bottom: 1px solid var(--border);
+}
+.home__table td {
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border);
+  color: var(--text-secondary);
+  vertical-align: top;
+}
+.home__table tr:last-child td { border-bottom: none; }
+.home__table tr:hover td { background: var(--bg-card-hover); }
+.home__table code {
+  font-family: 'Courier New', monospace;
+  font-size: 11px;
+  color: var(--accent);
+  background: var(--accent-dim);
+  padding: 2px 6px; border-radius: 3px;
+}

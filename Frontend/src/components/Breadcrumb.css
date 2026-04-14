@@ -1,0 +1,17 @@
+.breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 24px;
+  background: var(--bg-panel);
+  border-bottom: 1px solid var(--border);
+  font-family: var(--font-display);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.bc__link    { color: var(--text-secondary); transition: color 0.2s; }
+.bc__link:hover { color: var(--accent); }
+.bc__sep     { color: var(--text-dim); }
+.bc__current { color: var(--text-primary); font-weight: 700; }
