@@ -1,34 +1,35 @@
-import time
 import boto3
 
-time.sleep(5)
+dynamodb = boto3.client('dynamodb', endpoint_url='http://dynamodb:8000', region_name='us-east-1')
 
-dynamodb = boto3.client(
-    'dynamodb',
-    endpoint_url='http://dynamodb:8000',
-    region_name='us-east-1',
-    aws_access_key_id='local',
-    aws_secret_access_key='local'
+# 1. Borrar si existe para limpiar el esquema viejo
+try:
+    dynamodb.delete_table(TableName='Ecommerce')
+except:
+    pass
+
+# 2. Crear con el esquema de tus archivos (PK, SK y GSI1)
+dynamodb.create_table(
+    TableName='Ecommerce',
+    KeySchema=[
+        {'AttributeName': 'pk', 'KeyType': 'HASH'},
+        {'AttributeName': 'sk', 'KeyType': 'RANGE'}
+    ],
+    AttributeDefinitions=[
+        {'AttributeName': 'pk', 'AttributeType': 'S'},
+        {'AttributeName': 'sk', 'AttributeType': 'S'},
+        {'AttributeName': 'gsi1pk', 'AttributeType': 'S'},
+        {'AttributeName': 'gsi1sk', 'AttributeType': 'S'}
+    ],
+    GlobalSecondaryIndexes=[{
+        'IndexName': 'GSI1',
+        'KeySchema': [
+            {'AttributeName': 'gsi1pk', 'KeyType': 'HASH'},
+            {'AttributeName': 'gsi1sk', 'KeyType': 'RANGE'}
+        ],
+        'Projection': {'ProjectionType': 'ALL'},
+        'ProvisionedThroughput': {'ReadCapacityUnits': 5, 'WriteCapacityUnits': 5}
+    }],
+    ProvisionedThroughput={'ReadCapacityUnits': 5, 'WriteCapacityUnits': 5}
 )
-
-tables = dynamodb.list_tables()['TableNames']
-
-if 'Ecommerce' not in tables:
-    dynamodb.create_table(
-        TableName='Ecommerce',
-        KeySchema=[
-            {
-                'AttributeName': 'id',
-                'KeyType': 'HASH'
-            }
-        ],
-        AttributeDefinitions=[
-            {
-                'AttributeName': 'id',
-                'AttributeType': 'S'
-            }
-        ],
-        BillingMode='PAY_PER_REQUEST'
-    )
-
-print("Tabla Ecommerce lista")
+print("Infraestructura NoSQL sincronizada con el código de Django.")
