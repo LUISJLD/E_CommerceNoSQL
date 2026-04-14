@@ -1,0 +1,25 @@
+version: '3.9'
+
+services:
+
+  dynamodb:
+    image: amazon/dynamodb-local
+    container_name: dynamodb_local
+    ports:
+      - "3000:8000"
+    command: "-jar DynamoDBLocal.jar -sharedDb -inMemory"
+
+  web:
+    build: .
+    container_name: django_app
+    ports:
+      - "8000:8000"
+    volumes:
+      - .:/app
+    depends_on:
+      - dynamodb
+    environment:
+      - AWS_ACCESS_KEY_ID=local
+      - AWS_SECRET_ACCESS_KEY=local
+      - AWS_REGION_NAME=us-east-1
+      - DYNAMODB_ENDPOINT_URL=http://dynamodb:8000

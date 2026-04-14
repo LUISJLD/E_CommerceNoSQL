@@ -83,7 +83,12 @@ DATABASES = {
 AWS_ACCESS_KEY_ID = 'local'
 AWS_SECRET_ACCESS_KEY = 'local'
 AWS_REGION_NAME = 'us-east-1'
-DYNAMODB_ENDPOINT_URL = 'http://127.0.0.1:3000'
+
+import os
+DYNAMODB_ENDPOINT_URL = os.getenv(
+    'DYNAMODB_ENDPOINT_URL',
+    'http://127.0.0.1:3000'
+)
 
 # Password validation
 # https://docs.djangoproject.com/en/5.2/ref/settings/#auth-password-validators
