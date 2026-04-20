@@ -24,7 +24,13 @@ SECRET_KEY = os.getenv("SECRET_KEY", "dev-key")
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+# En desarrollo, permitir todos los hosts
+# En Codespaces, Django recibe peticiones desde app.github.dev
+if os.getenv('ENVIRONMENT') == 'development' or os.getenv('DEBUG') == 'True':
+    ALLOWED_HOSTS = ['*']
+    print("⚠️  ALLOWED_HOSTS: Permitiendo todos los hosts (MODO DESARROLLO)")
+else:
+    ALLOWED_HOSTS = []
 
 
 # Application definition
@@ -37,11 +43,13 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'rest_framework',
+    'corsheaders',
     'ecommerce',
 ]
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    'corsheaders.middleware.CorsMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -88,6 +96,58 @@ DYNAMODB_ENDPOINT_URL = os.getenv(
     'DYNAMODB_ENDPOINT_URL',
     'http://127.0.0.1:3000'
 )
+
+# ──────────────────────────────────────────────────────────
+# CORS Configuration
+# ──────────────────────────────────────────────────────────
+
+CORS_ALLOWED_ORIGINS = [
+    "http://localhost:3000",
+    "http://localhost:3001",
+    "http://localhost:5000",
+    "http://127.0.0.1:3000",
+    "http://127.0.0.1:3001",
+    "http://127.0.0.1:5000",
+]
+
+# Para Codespaces: detectar automáticamente el dominio
+# Ejemplo: https://user-codespace-8000.app.github.dev
+if 'CODESPACE_NAME' in os.environ or 'GITHUB_CODESPACES' in os.environ:
+    # En Codespaces, permitir todos los orígenes para desarrollo
+    CORS_ALLOW_ALL_ORIGINS = True
+    print("✅ CORS: Codespaces detectado - Permitiendo todos los orígenes")
+# Para desarrollo local - permitir todos los orígenes
+elif os.getenv('ENVIRONMENT') == 'development' or os.getenv('DEBUG') == 'True':
+    CORS_ALLOW_ALL_ORIGINS = True
+    print("⚠️  CORS: Permitiendo todos los orígenes (MODO DESARROLLO)")
+else:
+    print(f"✅ CORS: Permitiendo {len(CORS_ALLOWED_ORIGINS)} orígenes específicos")
+
+# Permitir credenciales (cookies, autenticación)
+CORS_ALLOW_CREDENTIALS = True
+
+# Headers permitidos
+CORS_ALLOW_HEADERS = [
+    'accept',
+    'accept-encoding',
+    'authorization',
+    'content-type',
+    'dnt',
+    'origin',
+    'user-agent',
+    'x-csrftoken',
+    'x-requested-with',
+]
+
+# Métodos HTTP permitidos
+CORS_ALLOW_METHODS = [
+    'DELETE',
+    'GET',
+    'OPTIONS',
+    'PATCH',
+    'POST',
+    'PUT',
+]
 
 # Password validation
 # https://docs.djangoproject.com/en/5.2/ref/settings/#auth-password-validators

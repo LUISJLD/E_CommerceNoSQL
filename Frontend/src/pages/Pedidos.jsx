@@ -1,18 +1,108 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import Layout from '../components/Layout';
 import StatusBadge from '../components/StatusBadge';
-import { getUserProfile, getUserOrders } from '../data/mockDb';
+import LoadingSpinner from '../components/LoadingSpinner';
+import ErrorAlert from '../components/ErrorAlert';
+import { userAPI, orderAPI } from '../services/api';
 import './Pedidos.css';
 
 export default function Pedidos() {
   const { userId } = useParams();
-  const navigate   = useNavigate();
-  const profile    = getUserProfile(userId);
-  const orders     = getUserOrders(userId);
+  const navigate = useNavigate();
+
+  const [profile, setProfile] = useState(null);
+  const [orders, setOrders] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [selectedId, setSelectedId] = useState(null);
 
-  const totalGastado = orders.reduce((s, o) => s + o.total, 0);
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+
+        const [profileData, allData] = await Promise.all([
+          userAPI.getProfile(userId),
+          userAPI.getOrders(userId),
+        ]);
+
+        setProfile(profileData);
+
+        // FILTRO ULTRA-ESTRICTO:
+        // Solo aceptamos ítems donde la SK sea EXACTAMENTE "ORDER#numeros"
+        // Esto descarta automáticamente a los "ORDER#numeros#ITEM#..."
+        const regexCabeceraOrden = /^ORDER#\d+$/; 
+        
+        const onlyRealOrders = allData.filter(item => 
+          item.sk && regexCabeceraOrden.test(item.sk)
+        );
+
+        setOrders(onlyRealOrders);
+      } catch (err) {
+        setError({ message: err.message || 'Error al cargar datos' });
+        console.error('Error fetching user data:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (userId) fetchData();
+  }, [userId]);
+
+  const handleRetry = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      const [profileData, ordersData] = await Promise.all([
+        userAPI.getProfile(userId),
+        userAPI.getOrders(userId),
+      ]);
+
+      setProfile(profileData);
+      setOrders(ordersData);
+    } catch (err) {
+      setError({
+        message: err.message || 'Error al cargar datos del usuario',
+        status: err.status,
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <Layout>
+        <LoadingSpinner message="Cargando perfil y órdenes..." />
+      </Layout>
+    );
+  }
+
+  if (error) {
+    return (
+      <Layout>
+        <div style={{ padding: '20px' }}>
+          <ErrorAlert error={error} onRetry={handleRetry} />
+        </div>
+      </Layout>
+    );
+  }
+
+  if (!profile) {
+    return (
+      <Layout>
+        <div className="od-notfound">
+          <p>Usuario <strong>#{userId}</strong> no encontrado.</p>
+          <button onClick={() => navigate(-1)}>← Volver</button>
+        </div>
+      </Layout>
+    );
+  }
+
+  const totalGastado = orders.reduce((s, o) => s + (o.total || 0), 0);
 
   return (
     <Layout>
@@ -44,10 +134,9 @@ export default function Pedidos() {
             </div>
             <div className="perfil-card__row">
               <span className="perfil-card__label">Pagos</span>
-              <span>{profile?.payments?.join(' · ')}</span>
+              <span>{profile?.payments?.join(' · ') || 'N/A'}</span>
             </div>
 
-            {/* DynamoDB key */}
             <div className="perfil-card__key-block">
               <div className="perfil-card__key-row">
                 <span className="key-tag">PK</span><code>USER#{userId}</code>
@@ -71,49 +160,43 @@ export default function Pedidos() {
             </div>
           </div>
 
-          {/* Lista de pedidos */}
-          <div className="pedidos-list-header">
-            <span className="pedidos-list-title">Pedidos Recientes</span>
-            <div className="pedidos-list-subkey">
-              <code>SK begins_with ORDER#</code>
-            </div>
-          </div>
-
-          <div className="pedidos-list">
-            {orders.map(order => (
-              <div
-                key={order.orderId}
-                className={`pedido-row ${selectedId === order.orderId ? 'pedido-row--active' : ''}`}
-                onClick={() => setSelectedId(order.orderId)}
-              >
-                <div className="pedido-row__left">
-                  <StatusBadge status={order.status} />
-                  <span className="pedido-row__date">{order.date}</span>
-                </div>
-                <div className="pedido-row__right">
-                  <span className="pedido-row__addr">{order.address}</span>
-                  <button
-                    className="pedido-row__detail-btn"
-                    onClick={e => { e.stopPropagation(); navigate(`/usuario/${userId}/pedidos/${order.orderId}`); }}
-                  >
-                    Ver detalle →
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
         </aside>
 
         {/* ── Panel derecho ── */}
         <main className="pedidos-main">
           {selectedId ? (
-            <OrderPreview userId={userId} orderId={selectedId} navigate={navigate} />
+            <OrderPreview userId={userId} orderId={selectedId} navigate={navigate} onBack={() => setSelectedId(null)} />
           ) : (
-            <div className="pedidos-empty">
-              <div className="pedidos-empty__icon">📦</div>
-              <div className="pedidos-empty__text">
-                Selecciona un pedido para ver su detalle
+            <div className="pedidos-list-large">
+              <div className="pedidos-header">
+                <button className="volver-btn" onClick={() => navigate('/')}>← Volver</button>
+                <h1>Mis Pedidos</h1>
+                <p>{orders.length} pedidos encontrados</p>
               </div>
+              {orders.length === 0 ? (
+                <div className="pedidos-empty">
+                  <div className="pedidos-empty__icon">📦</div>
+                  <div className="pedidos-empty__text">No hay pedidos disponibles</div>
+                </div>
+              ) : (
+                <div className="pedidos-grid">
+                  {orders.map(order => (
+                    <div
+                      key={order.orderId}
+                      className="pedido-card"
+                      onClick={() => setSelectedId(order.orderId)}
+                    >
+                      <div className="pedido-card__header">
+                        <div className="pedido-card__id">ORD#{order.orderId}</div>
+                        <StatusBadge status={order.status} />
+                      </div>
+                      <div className="pedido-card__date">{order.date}</div>
+                      <div className="pedido-card__address">{order.address}</div>
+                      <div className="pedido-card__total">${order.total?.toLocaleString()}</div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           )}
         </main>
@@ -123,20 +206,51 @@ export default function Pedidos() {
   );
 }
 
-// ── Preview inline ────────────────────────────────────────────────────
-import { getOrderItems } from '../data/mockDb';
+function OrderPreview({ userId, orderId, navigate, onBack }) {
+  const [order, setOrder] = useState(null);
+  const [items, setItems] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-function OrderPreview({ userId, orderId, navigate }) {
-  const { getUserOrders, getOrderItems } = require('../data/mockDb');
-  const orders = getUserOrders(userId);
-  const order  = orders.find(o => o.orderId === orderId);
-  const items  = getOrderItems(orderId);
-  if (!order) return null;
+  useEffect(() => {
+    const fetchOrderData = async () => {
+      try {
+        setLoading(true);
+        // 1. Obtenemos todos los ítems de la partición del usuario (Perfil, Órdenes e Ítems)
+        const allData = await userAPI.getOrders(userId);
+
+        // 2. Extraemos la cabecera del pedido (el ítem con SK: ORDER#10X)
+        const foundOrder = allData.find(o => o.orderId === orderId);
+        setOrder(foundOrder);
+
+        // 3. Extraemos los productos asociados a ese pedido específico
+        // Filtramos por la SK que sigue el patrón: ORDER#{ID}#ITEM#...
+        const orderItems = allData.filter(item => 
+          item.sk && item.sk.startsWith(`ORDER#${orderId}#ITEM#`)
+        );
+
+        setItems(orderItems);
+      } catch (err) {
+        console.error('Error al recuperar el detalle del pedido:', err);
+        setItems([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (userId && orderId) {
+      fetchOrderData();
+    }
+  }, [userId, orderId]);
+
+  if (loading || !order) return null;
 
   return (
     <div className="order-preview">
       <div className="order-preview__header">
         <div>
+          <button className="order-preview__back-btn" onClick={onBack}>
+            ← Regresar a la lista
+          </button>
           <div className="order-preview__tag">Detalle del Pedido</div>
           <h2 className="order-preview__id">ORD#{order.orderId}</h2>
         </div>
@@ -159,21 +273,27 @@ function OrderPreview({ userId, orderId, navigate }) {
         <span>Ítems del Pedido</span>
         <code>PK=ORDER#{orderId} · SK begins_with ITEM#</code>
       </div>
-      <table className="items-table">
-        <thead>
-          <tr><th>Producto</th><th>Cant.</th><th>Precio unit.</th><th>Subtotal</th></tr>
-        </thead>
-        <tbody>
-          {items.map(item => (
-            <tr key={item.sk}>
-              <td>{item.product}</td>
-              <td>{item.qty}</td>
-              <td>${item.unitPrice.toLocaleString()}</td>
-              <td>${item.subtotal.toLocaleString()}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+      {items.length > 0 ? (
+        <table className="items-table">
+          <thead>
+            <tr><th>Producto</th><th>Cant.</th><th>Precio unit.</th><th>Subtotal</th></tr>
+          </thead>
+          <tbody>
+            {items.map(item => (
+              <tr key={item.sk}>
+                <td>{item.product}</td>
+                <td>{item.qty}</td>
+                <td>${item.unitPrice?.toLocaleString() || '0'}</td>
+                <td>${item.subtotal?.toLocaleString() || '0'}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      ) : (
+        <div style={{ padding: '20px', textAlign: 'center', color: '#999' }}>
+          No hay ítems disponibles
+        </div>
+      )}
     </div>
   );
 }

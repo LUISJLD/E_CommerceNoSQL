@@ -1,28 +1,119 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import Layout from '../components/Layout';
 import StatusBadge from '../components/StatusBadge';
-import { getUserOrders, getOrderItems } from '../data/mockDb';
+import LoadingSpinner from '../components/LoadingSpinner';
+import ErrorAlert from '../components/ErrorAlert';
+import { userAPI, orderAPI } from '../services/api';
 import './OrdenDetalle.css';
 
 export default function OrdenDetalle() {
   const { userId, orderId } = useParams();
   const navigate = useNavigate();
 
-  const orders = getUserOrders(userId);
-  const order  = orders.find(o => o.orderId === orderId);
-  const items  = getOrderItems(orderId);
+  const [order, setOrder] = useState(null);
+  const [items, setItems] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-  if (!order) return (
-    <Layout>
-      <div className="od-notfound">
-        <p>Orden <strong>#{orderId}</strong> no encontrada.</p>
-        <button onClick={() => navigate(-1)}>← Volver</button>
-      </div>
-    </Layout>
-  );
+  useEffect(() => {
+    const fetchOrderData = async () => {
+      try {
+        setLoading(true);
+        setError(null);
 
-  const totalCalc = items.reduce((s, i) => s + i.subtotal, 0);
+        const ordersData = await userAPI.getOrders(userId);
+        const foundOrder = ordersData.find(o => o.orderId === orderId);
+
+        if (!foundOrder) {
+          setError({
+            message: `Orden #${orderId} no encontrada para el usuario ${userId}`,
+            status: 404,
+          });
+          return;
+        }
+
+        setOrder(foundOrder);
+
+        try {
+          const itemsData = await orderAPI.getOrderItems(orderId);
+          setItems(itemsData || []);
+        } catch (itemsErr) {
+          console.warn('No se pueden cargar ítems:', itemsErr.message);
+          setItems([]);
+        }
+      } catch (err) {
+        setError({
+          message: err.message || 'Error al cargar orden',
+          status: err.status,
+        });
+        console.error('Error fetching order data:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchOrderData();
+  }, [userId, orderId]);
+
+  const handleRetry = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      const ordersData = await userAPI.getOrders(userId);
+      const foundOrder = ordersData.find(o => o.orderId === orderId);
+
+      if (foundOrder) {
+        setOrder(foundOrder);
+        try {
+          const itemsData = await orderAPI.getOrderItems(orderId);
+          setItems(itemsData || []);
+        } catch (itemsErr) {
+          console.warn('No se pueden cargar ítems:', itemsErr.message);
+          setItems([]);
+        }
+      }
+    } catch (err) {
+      setError({
+        message: err.message || 'Error al cargar orden',
+        status: err.status,
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <Layout>
+        <LoadingSpinner message="Cargando detalles de la orden..." />
+      </Layout>
+    );
+  }
+
+  if (error) {
+    return (
+      <Layout>
+        <div style={{ padding: '20px' }}>
+          <ErrorAlert error={error} onRetry={handleRetry} />
+        </div>
+      </Layout>
+    );
+  }
+
+  if (!order) {
+    return (
+      <Layout>
+        <div className="od-notfound">
+          <p>Orden <strong>#{orderId}</strong> no encontrada.</p>
+          <button onClick={() => navigate(-1)}>← Volver</button>
+        </div>
+      </Layout>
+    );
+  }
+
+  const totalCalc = items.reduce((s, i) => s + (i.subtotal || 0), 0);
 
   return (
     <Layout>
@@ -83,44 +174,52 @@ export default function OrdenDetalle() {
               </div>
               <div className="od__meta-card od__meta-card--total">
                 <div className="od__meta-label">Total de la orden</div>
-                <div className="od__meta-val od__meta-val--big">${totalCalc.toLocaleString()}</div>
+                <div className="od__meta-val od__meta-val--big">${totalCalc?.toLocaleString() || order.total?.toLocaleString()}</div>
               </div>
             </div>
           </section>
 
           {/* Ítems */}
           <section className="od__section">
-            <h2 className="od__section-title">Ítems del Pedido</h2>
-            <div className="od__items-table-wrap">
-              <table className="od__items-table">
-                <thead>
-                  <tr>
-                    <th>SK (DynamoDB)</th>
-                    <th>Producto</th>
-                    <th>Cantidad</th>
-                    <th>Precio Unit.</th>
-                    <th>Subtotal</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {items.map(item => (
-                    <tr key={item.sk}>
-                      <td><code>{item.sk}</code></td>
-                      <td>{item.product}</td>
-                      <td>{item.qty}</td>
-                      <td>${item.unitPrice.toLocaleString()}</td>
-                      <td><strong>${item.subtotal.toLocaleString()}</strong></td>
+            <h2 className="od__section-title">Ítems del Pedido ({items.length})</h2>
+            {items.length === 0 ? (
+              <div style={{ padding: '20px', textAlign: 'center', color: '#999' }}>
+                <p>No hay ítems disponibles</p>
+              </div>
+            ) : (
+              <div className="od__items-table-wrap">
+                <table className="od__items-table">
+                  <thead>
+                    <tr>
+                      <th>SK (DynamoDB)</th>
+                      <th>Producto</th>
+                      <th>Cantidad</th>
+                      <th>Precio Unit.</th>
+                      <th>Subtotal</th>
                     </tr>
-                  ))}
-                </tbody>
-                <tfoot>
-                  <tr>
-                    <td colSpan="4" className="od__total-label">Total</td>
-                    <td className="od__total-val">${totalCalc.toLocaleString()}</td>
-                  </tr>
-                </tfoot>
-              </table>
-            </div>
+                  </thead>
+                  <tbody>
+                    {items.map(item => (
+                      <tr key={item.sk}>
+                        <td><code>{item.sk}</code></td>
+                        <td>{item.product}</td>
+                        <td>{item.qty}</td>
+                        <td>${item.unitPrice?.toLocaleString() || '0'}</td>
+                        <td><strong>${item.subtotal?.toLocaleString() || '0'}</strong></td>
+                      </tr>
+                    ))}
+                  </tbody>
+                  {items.length > 0 && (
+                    <tfoot>
+                      <tr>
+                        <td colSpan="4" className="od__total-label">Total</td>
+                        <td className="od__total-val">${totalCalc.toLocaleString()}</td>
+                      </tr>
+                    </tfoot>
+                  )}
+                </table>
+              </div>
+            )}
           </section>
 
         </div>

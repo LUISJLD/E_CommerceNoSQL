@@ -1,8 +1,26 @@
 from .aws_client import dynamo_instance
-from boto3.dynamodb.conditions import Key
+from boto3.dynamodb.conditions import Attr, Key
 
 class EcommerceService:
     table = dynamo_instance.table
+
+    @staticmethod
+    def get_all_user_profiles():
+        # Scan con filtro para traer solo los perfiles de usuario
+        items = []
+        response = EcommerceService.table.scan(
+            FilterExpression=Attr('sk').eq('PROFILE')
+        )
+        items.extend(response.get('Items', []))
+
+        while 'LastEvaluatedKey' in response:
+            response = EcommerceService.table.scan(
+                FilterExpression=Attr('sk').eq('PROFILE'),
+                ExclusiveStartKey=response['LastEvaluatedKey']
+            )
+            items.extend(response.get('Items', []))
+
+        return items
 
     @staticmethod
     def get_user_profile(user_id):

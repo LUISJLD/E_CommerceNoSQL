@@ -1,13 +1,56 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Layout from '../components/Layout';
-import { getUserProfile } from '../data/mockDb';
+import LoadingSpinner from '../components/LoadingSpinner';
+import ErrorAlert from '../components/ErrorAlert';
+import { userAPI } from '../services/api';
 import './Usuario.css';
-
-const USERS = ['luisa'];
 
 export default function Usuario() {
   const navigate = useNavigate();
+  const [users, setUsers] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  const fetchUsers = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const items = await userAPI.getAllUsers();
+      setUsers(Array.isArray(items) ? items : []);
+    } catch (err) {
+      setError({
+        message: 'Error al cargar usuarios desde el backend',
+        status: err.status || 'unknown',
+      });
+      console.error('Error loading users:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchUsers();
+  }, []);
+
+  if (loading) {
+    return (
+      <Layout>
+        <LoadingSpinner message="Cargando usuarios..." />
+      </Layout>
+    );
+  }
+
+  if (error) {
+    return (
+      <Layout>
+        <div style={{ padding: '20px' }}>
+          <ErrorAlert error={error} onRetry={fetchUsers} />
+        </div>
+      </Layout>
+    );
+  }
+
   return (
     <Layout>
       <div className="usuario">
@@ -18,30 +61,36 @@ export default function Usuario() {
           </p>
         </div>
         <div className="usuario__grid">
-          {USERS.map(uid => {
-            const profile = getUserProfile(uid);
-            return (
-              <div
-                key={uid}
-                className="user-card"
-                onClick={() => navigate(`/usuario/${uid}/pedidos`)}
-              >
-                <div className="user-card__avatar">
-                  {profile?.name?.[0] || uid[0].toUpperCase()}
+          {users.length > 0 ? (
+            users.map(user => {
+              const userId = user.userId || user.pk?.replace(/^USER#/, '') || '';
+              const name = user.name || userId;
+
+              return (
+                <div
+                  key={userId}
+                  className="user-card"
+                  onClick={() => navigate(`/usuario/${userId}/pedidos`)}
+                >
+                  <div className="user-card__avatar">
+                    {name?.[0]?.toUpperCase() || userId[0]?.toUpperCase() || 'U'}
+                  </div>
+                  <div className="user-card__info">
+                    <div className="user-card__name">{name}</div>
+                    <div className="user-card__email">{user.email || '-'}</div>
+                    <div className="user-card__addr">{user.address || '-'}</div>
+                  </div>
+                  <div className="user-card__key">
+                    <span className="key-tag">PK</span>
+                    <code>{user.pk || `USER#${userId}`}</code>
+                  </div>
+                  <div className="user-card__arrow">→</div>
                 </div>
-                <div className="user-card__info">
-                  <div className="user-card__name">{profile?.name || uid}</div>
-                  <div className="user-card__email">{profile?.email}</div>
-                  <div className="user-card__addr">{profile?.address}</div>
-                </div>
-                <div className="user-card__key">
-                  <span className="key-tag">PK</span>
-                  <code>USER#{uid}</code>
-                </div>
-                <div className="user-card__arrow">→</div>
-              </div>
-            );
-          })}
+              );
+            })
+          ) : (
+            <div className="usuario__empty">No se encontraron usuarios.</div>
+          )}
         </div>
       </div>
     </Layout>

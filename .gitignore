@@ -4,6 +4,7 @@ __pycache__/
 
 # Ignore environment variables files
 .env
+.env.production
 venv/
 
 # Django stuff:
@@ -13,8 +14,8 @@ venv/
 __pycache__/
 local_settings.py
 /staticfiles/
-
-
+node_modules/
+frontend/node_modules/
 # VSCode settings
 .vscode/
 
