@@ -15,11 +15,13 @@ Sistema de visualización y gestión de datos desarrollado para la cátedra de *
 ---
 
 ## Propósito del Proyecto
+
 El objetivo principal es implementar y visualizar los conceptos avanzados de modelado NoSQL aprendidos en clase. A través de una interfaz moderna, el sistema permite gestionar perfiles de usuario, historiales de pedidos y desgloses de productos, garantizando que cada consulta se resuelva de manera eficiente sin realizar "joins" costosos, siguiendo la filosofía de DynamoDB.
 
 ---
 
 ## Stack Tecnológico
+
 * **Base de Datos:** Amazon DynamoDB (Local)
 * **Backend:** Python con Django Framework
 * **Frontend:** React.js con diseño de interfaz de usuario (UI) personalizada
@@ -32,13 +34,15 @@ El objetivo principal es implementar y visualizar los conceptos avanzados de mod
 El diseño se basa en **Patrones de Acceso** predefinidos que dictan la estructura de las llaves primarias compuestas (PK y SK).
 
 ### Patrones de Acceso Implementados:
-1.  **Perfil de Usuario:** `PK=USER#<id>`, `SK=PROFILE` (Lectura directa O(1)).
-2.  **Órdenes de un Usuario:** `PK=USER#<id>`, `SK comienza con ORDER#` (Query ordenado cronológicamente).
-3.  **Ítems de una Orden:** `PK=ORDER#<id>`, `SK comienza con ITEM#` (Recupera todos los productos de un pedido).
-4.  **Buscar Orden sin Usuario:** Implementado mediante el índice global **GSI1** (`GSI1PK=ORDER#<id>`).
-5.  **Productos por Categoría:** `PK=PROD#<id>`, `SK=CAT#<categoria>`.
+
+1. **Perfil de Usuario:** `PK=USER#<id>`, `SK=PROFILE` (Lectura directa O(1)).
+2. **Órdenes de un Usuario:** `PK=USER#<id>`, `SK comienza con ORDER#` (Query ordenado cronológicamente).
+3. **Ítems de una Orden:** `PK=ORDER#<id>`, `SK comienza con ITEM#` (Recupera todos los productos de un pedido).
+4. **Buscar Orden sin Usuario:** Implementado mediante el índice global **GSI1** (`GSI1PK=ORDER#<id>`).
+5. **Productos por Categoría:** `PK=PROD#<id>`, `SK=CAT#<categoria>`.
 
 ### Estructura de Llaves Jerárquicas:
+
 | Entidad | Partition Key (PK) | Sort Key (SK) | Propósito |
 | :--- | :--- | :--- | :--- |
 | **Usuario** | `USER#<username>` | `PROFILE` | Datos básicos del perfil. |
@@ -52,26 +56,28 @@ El diseño se basa en **Patrones de Acceso** predefinidos que dictan la estructu
 Sigue estos pasos para levantar el entorno completo en **GitHub Codespaces** o localmente:
 
 ### 1. Preparar el Entorno
+
 Asegúrate de que el script de inicialización tenga permisos de ejecución:
 
 ```bash
 chmod +x backend/entrypoint.sh
+```
 
 ### 2. Levantar Servicios con Docker
 
 Construye y levanta los contenedores para el Backend, Frontend y DynamoDB Local:
 
+```bash
 docker-compose up --build
+```
 
-### 3 Iniciar el Frontend
+### 3. Iniciar el Frontend
 
 Navega a la carpeta del frontend y arranca el servidor de desarrollo:
 
+```bash
 cd frontend
 npm install
 npm start
-
-
-
-
+```
 
