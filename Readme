@@ -2,43 +2,43 @@
 
 Sistema de visualización y gestión de datos desarrollado para la cátedra de **Bases de Datos No Relacionales**. El proyecto implementa una arquitectura de alto rendimiento basada en **DynamoDB** y el patrón de **Single Table Design** para optimizar el acceso a la información de un ecosistema de E-commerce.
 
-##  Integrantes - Grupo 2
-* [cite_start]Daniel Eduardo Bocachica Castillo [cite: 9]
-* [cite_start]Luis David Pérez Flórez [cite: 10]
-* [cite_start]Camilo Pérez Moreno [cite: 8]
-* [cite_start]Jesus Capataz [cite: 12]
-* [cite_start]Daniel Rangel Morales [cite: 11]
+## Integrantes - Grupo 2
+* Daniel Eduardo Bocachica Castillo
+* Luis David Pérez Flórez
+* Camilo Pérez Moreno
+* Jesus Capataz
+* Daniel Rangel Morales
 
-[cite_start]**Profesor:** Carlos Andres Oliveros Villanueva [cite: 6]  
-[cite_start]**Institución:** Universidad del Magdalena (2026-1) [cite: 13, 14]
-
----
-
-##  Propósito del Proyecto
-[cite_start]El objetivo principal es implementar y visualizar los conceptos avanzados de modelado NoSQL aprendidos en clase[cite: 16]. [cite_start]A través de una interfaz moderna, el sistema permite gestionar perfiles de usuario, historiales de pedidos y desgloses de productos, garantizando que cada consulta se resuelva de manera eficiente sin realizar "joins" costosos, siguiendo la filosofía de DynamoDB[cite: 17, 27].
+**Profesor:** Carlos Andres Oliveros Villanueva  
+**Institución:** Universidad del Magdalena (2026-1)
 
 ---
 
-##  Stack Tecnológico
-* [cite_start]**Base de Datos:** Amazon DynamoDB (Local)[cite: 57].
-* **Backend:** Python con Django Framework.
-* **Frontend:** React.js con diseño de interfaz de usuario (UI) personalizada.
-* **Infraestructura:** Docker y Docker Compose para orquestación de servicios.
+## Propósito del Proyecto
+El objetivo principal es implementar y visualizar los conceptos avanzados de modelado NoSQL aprendidos en clase. A través de una interfaz moderna, el sistema permite gestionar perfiles de usuario, historiales de pedidos y desgloses de productos, garantizando que cada consulta se resuelva de manera eficiente sin realizar "joins" costosos, siguiendo la filosofía de DynamoDB.
 
 ---
 
-##  Modelado de Datos (Single Table Design)
+## Stack Tecnológico
+* **Base de Datos:** Amazon DynamoDB (Local)
+* **Backend:** Python con Django Framework
+* **Frontend:** React.js con diseño de interfaz de usuario (UI) personalizada
+* **Infraestructura:** Docker y Docker Compose para orquestación de servicios
 
-[cite_start]El diseño se basa en **Patrones de Acceso** predefinidos que dictan la estructura de las llaves primarias compuestas (PK y SK)[cite: 15, 22].
+---
 
-### [cite_start]Patrones de Acceso Implementados[cite: 25]:
+## Modelado de Datos (Single Table Design)
+
+El diseño se basa en **Patrones de Acceso** predefinidos que dictan la estructura de las llaves primarias compuestas (PK y SK).
+
+### Patrones de Acceso Implementados:
 1.  **Perfil de Usuario:** `PK=USER#<id>`, `SK=PROFILE` (Lectura directa O(1)).
 2.  **Órdenes de un Usuario:** `PK=USER#<id>`, `SK comienza con ORDER#` (Query ordenado cronológicamente).
 3.  **Ítems de una Orden:** `PK=ORDER#<id>`, `SK comienza con ITEM#` (Recupera todos los productos de un pedido).
 4.  **Buscar Orden sin Usuario:** Implementado mediante el índice global **GSI1** (`GSI1PK=ORDER#<id>`).
 5.  **Productos por Categoría:** `PK=PROD#<id>`, `SK=CAT#<categoria>`.
 
-### [cite_start]Estructura de Llaves Jerárquicas[cite: 44, 45]:
+### Estructura de Llaves Jerárquicas:
 | Entidad | Partition Key (PK) | Sort Key (SK) | Propósito |
 | :--- | :--- | :--- | :--- |
 | **Usuario** | `USER#<username>` | `PROFILE` | Datos básicos del perfil. |
@@ -47,13 +47,14 @@ Sistema de visualización y gestión de datos desarrollado para la cátedra de *
 
 ---
 
-##  Instalación y Ejecución
+## Instalación y Ejecución
 
 Sigue estos pasos para levantar el entorno completo en **GitHub Codespaces** o localmente:
 
 ### 1. Preparar el Entorno
 Asegúrate de que el script de inicialización tenga permisos de ejecución:
 
+```bash
 chmod +x backend/entrypoint.sh
 
 ### 2. Levantar Servicios con Docker
