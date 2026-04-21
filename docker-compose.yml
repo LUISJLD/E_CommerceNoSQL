@@ -8,6 +8,12 @@ services:
       - "3000:8000"
     command: "-jar DynamoDBLocal.jar -sharedDb -inMemory"
 
+  redis:
+    image: redis:7-alpine
+    container_name: redis_cache
+    ports:
+      - "6379:6379"
+
   web:  
     build: ./backend
     container_name: django_app
@@ -17,11 +23,14 @@ services:
       - ./backend:/app
     depends_on:
       - dynamodb
+      - redis
     environment:
       - AWS_ACCESS_KEY_ID=local
       - AWS_SECRET_ACCESS_KEY=local
       - AWS_REGION_NAME=us-east-1
       - DYNAMODB_ENDPOINT_URL=http://dynamodb:8000
+      - REDIS_URL=redis://redis:6379/1
+      - ECOMMERCE_CACHE_TTL_SECONDS=60
       - ENVIRONMENT=development
       - DEBUG=True
       - API_URL=http://localhost:8000/api

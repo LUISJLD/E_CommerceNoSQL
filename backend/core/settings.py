@@ -91,7 +91,18 @@ AWS_ACCESS_KEY_ID = 'local'
 AWS_SECRET_ACCESS_KEY = 'local'
 AWS_REGION_NAME = 'us-east-1'
 
-import os
+# Cache TTL base para el patrón cache-aside
+ECOMMERCE_CACHE_TTL_SECONDS = int(os.getenv('ECOMMERCE_CACHE_TTL_SECONDS', '60'))
+REDIS_URL = os.getenv('REDIS_URL', 'redis://127.0.0.1:6379/1')
+
+CACHES = {
+    'default': {
+        'BACKEND': 'django.core.cache.backends.redis.RedisCache',
+        'LOCATION': REDIS_URL,
+        'TIMEOUT': ECOMMERCE_CACHE_TTL_SECONDS,
+    }
+}
+
 DYNAMODB_ENDPOINT_URL = os.getenv(
     'DYNAMODB_ENDPOINT_URL',
     'http://127.0.0.1:3000'
