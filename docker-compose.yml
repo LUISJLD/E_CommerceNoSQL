@@ -1,5 +1,3 @@
-version: '3.9'
-
 services:
   dynamodb:
     image: amazon/dynamodb-local
@@ -13,6 +11,11 @@ services:
     container_name: redis_cache
     ports:
       - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
 
   web:  
     build: ./backend
@@ -22,8 +25,10 @@ services:
     volumes:
       - ./backend:/app
     depends_on:
-      - dynamodb
-      - redis
+      dynamodb:
+        condition: service_started
+      redis:
+        condition: service_healthy
     environment:
       - AWS_ACCESS_KEY_ID=local
       - AWS_SECRET_ACCESS_KEY=local
