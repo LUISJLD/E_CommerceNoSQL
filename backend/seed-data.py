@@ -40,10 +40,10 @@ def seed_complete_data():
             'address': 'Sede Unimagdalena'
         })
 
-        # 3. ÍTEMS DEL PEDIDO (Nombres ajustados a tu React)
+        # 3. ÍTEMS DEL PEDIDO (Patrón 3: pk=ORDER#, sk begins_with ITEM#)
         table.put_item(Item={
-            'pk': f'USER#{u_id}',
-            'sk': f'ORDER#{o_id}#ITEM#PROD_{i}', 
+            'pk': f'ORDER#{o_id}',
+            'sk': f'ITEM#PROD_{i}', 
             'product': user['prod'], # Antes era product_name
             'qty': 1,                # Antes era quantity
             'unitPrice': price,      # Antes era price
