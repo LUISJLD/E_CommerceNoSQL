@@ -17,7 +17,22 @@ services:
       timeout: 3s
       retries: 10
 
-  web:  
+  localstack:                          # ← NUEVO: Lambda + API Gateway
+    image: localstack/localstack:3.4
+    container_name: localstack
+    ports:
+      - "4566:4566"
+    environment:
+      - SERVICES=lambda,apigateway,dynamodb,iam,logs
+      - DEFAULT_REGION=us-east-1
+      - AWS_DEFAULT_REGION=us-east-1
+      - LAMBDA_EXECUTOR=local
+      - DEBUG=1
+    volumes:
+      - "/var/run/docker.sock:/var/run/docker.sock"
+      - "./localstack_data:/var/lib/localstack"
+
+  web:
     build: ./backend
     container_name: django_app
     ports:
@@ -38,5 +53,3 @@ services:
       - ECOMMERCE_CACHE_TTL_SECONDS=60
       - ENVIRONMENT=development
       - DEBUG=True
-      - API_URL=http://localhost:8000/api
-    command: ./entrypoint.sh
