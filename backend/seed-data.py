@@ -3,7 +3,7 @@ from decimal import Decimal
 import os
 
 endpoint = os.getenv('DYNAMODB_ENDPOINT_URL', 'http://dynamodb:8000')
-dynamodb = boto3.resource('dynamodb', endpoint_url=endpoint, region_name='us-east-1')
+dynamodb = boto3.resource('dynamodb', endpoint_url='http://localhost:4566')
 table = dynamodb.Table('Ecommerce')
 
 def seed_complete_data():

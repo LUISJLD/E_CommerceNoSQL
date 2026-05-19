@@ -1,8 +1,8 @@
 import boto3
 import time
 
-# Conexión usando el endpoint de Docker
-dynamodb = boto3.client('dynamodb', endpoint_url='http://dynamodb:8000', region_name='us-east-1')
+# LocalStack usa el puerto 4566 por defecto para todos los servicios
+dynamodb = boto3.resource('dynamodb', endpoint_url='http://localhost:4566')
 
 def create_ecommerce_infrastructure():
     try:

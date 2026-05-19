@@ -11,14 +11,15 @@ def lambda_handler(event, context):
     table = get_table()
 
     def _fetch():
-        items, response = [], table.scan(
-            FilterExpression=Attr('sk').eq('PROFILE')
+        items = []
+        response = table.scan(
+            FilterExpression=Attr('pk').begins_with('USER#') & Attr('sk').eq('PROFILE')
         )
         items.extend(response.get('Items', []))
         while 'LastEvaluatedKey' in response:
             response = table.scan(
-                FilterExpression=Attr('sk').eq('PROFILE'),
-                ExclusiveStartKey=response['LastEvaluatedKey']
+                ExclusiveStartKey=response['LastEvaluatedKey'],
+                FilterExpression=Attr('pk').begins_with('USER#') & Attr('sk').eq('PROFILE')
             )
             items.extend(response.get('Items', []))
         return items
