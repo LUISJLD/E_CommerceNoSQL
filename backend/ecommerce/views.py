@@ -3,6 +3,14 @@ from rest_framework.response import Response
 from rest_framework import status
 from .services import EcommerceService
 
+
+class ProductListView(APIView):
+    def get(self, request):
+        category = request.query_params.get('category')
+        items = EcommerceService.get_all_products(category)
+        return Response(items)
+
+
 class UserListView(APIView):
     def get(self, request):
         items = EcommerceService.get_all_user_profiles()

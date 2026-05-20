@@ -114,15 +114,25 @@ class EcommerceService:
         return EcommerceService._cache_aside(cache_key, _fetch_order)
 
     @staticmethod
-    def get_products_by_category(prod_id, category):
-        cache_key = f'products:category:{prod_id}:{category}'
+    def get_all_products(category=None):
+        cache_key = f'products:all:{category or "all"}'
 
         def _fetch_products():
-            # Patrón 5: Productos por categoría
-            response = EcommerceService.table.query(
-                KeyConditionExpression=Key('pk').eq(f'PROD#{prod_id}') & 
-                                       Key('sk').eq(f'CAT#{category}')
-            )
-            return response.get('Items', [])
+            filter_exp = Attr('sk').begins_with('PRODUCT')
+            if category:
+                filter_exp = filter_exp & Attr('category').eq(category)
+
+            items = []
+            response = EcommerceService.table.scan(FilterExpression=filter_exp)
+            items.extend(response.get('Items', []))
+
+            while 'LastEvaluatedKey' in response:
+                response = EcommerceService.table.scan(
+                    FilterExpression=filter_exp,
+                    ExclusiveStartKey=response['LastEvaluatedKey']
+                )
+                items.extend(response.get('Items', []))
+
+            return items
 
         return EcommerceService._cache_aside(cache_key, _fetch_products)

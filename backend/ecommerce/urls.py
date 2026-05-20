@@ -1,7 +1,15 @@
 from django.urls import path
-from .views import UserListView, UserProfileDetail, UserOrdersList, GlobalOrderSearch, OrderItemsList
+from .views import (
+    ProductListView,
+    UserListView,
+    UserProfileDetail,
+    UserOrdersList,
+    GlobalOrderSearch,
+    OrderItemsList,
+)
 
 urlpatterns = [
+    path('products/', ProductListView.as_view()),
     path('users/', UserListView.as_view()),
     path('user/<str:user_id>/profile/', UserProfileDetail.as_view()),
     path('user/<str:user_id>/orders/', UserOrdersList.as_view()),
