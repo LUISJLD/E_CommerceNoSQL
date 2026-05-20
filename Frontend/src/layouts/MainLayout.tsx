@@ -1,0 +1,21 @@
+import type { ReactNode } from "react";
+import Header from "./Header";
+import Footer from "./Footer";
+
+interface MainLayoutProps {
+  children: ReactNode;
+  searchQuery: string;
+  onSearchChange: (value: string) => void;
+}
+
+export default function MainLayout({ children, searchQuery, onSearchChange }: MainLayoutProps) {
+  return (
+    <div className="min-h-screen flex flex-col bg-white">
+      <Header searchQuery={searchQuery} onSearchChange={onSearchChange} />
+      <div className="flex flex-1 max-w-[1200px] mx-auto w-full px-8 py-6 gap-8">
+        {children}
+      </div>
+      <Footer />
+    </div>
+  );
+}
