@@ -35,9 +35,8 @@ yarn-error.log*
 cdk.out/
 infrastructure/cdk.out/
 
-# LocalStack data (logs and temp files):
-localstack_data/logs/
-localstack_data/tmp/
+# LocalStack data:
+localstack_data/
 
 # Testing:
 .pytest_cache/
