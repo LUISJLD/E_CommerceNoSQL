@@ -17,7 +17,7 @@ services:
       timeout: 3s
       retries: 10
 
-  localstack:                          # ← NUEVO: Lambda + API Gateway
+  localstack:
     image: localstack/localstack:3.4
     container_name: localstack
     ports:
@@ -53,3 +53,16 @@ services:
       - ECOMMERCE_CACHE_TTL_SECONDS=60
       - ENVIRONMENT=development
       - DEBUG=True
+
+  frontend:
+    build: ./frontend
+    container_name: ecocart_frontend
+    ports:
+      - "5173:5173"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    depends_on:
+      - web
+    environment:
+      - VITE_API_URL=http://localhost:8000/api
