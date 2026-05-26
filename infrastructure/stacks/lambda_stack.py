@@ -50,9 +50,17 @@ class LambdaStack(Stack):
         fn_orders      = make_lambda("GetUserOrders",  "get_user_orders")
         fn_order_by_id = make_lambda("GetOrderById",   "get_order_by_id")
         fn_order_items = make_lambda("GetOrderItems",  "get_order_items")
+        fn_products    = make_lambda("GetAllProducts", "get_products")
 
         api = apigw.RestApi(self, "EcommerceApi",
-                            rest_api_name="ecommerce-serverless")
+                            rest_api_name="ecommerce-serverless",
+                            default_cors_preflight_options=apigw.CorsOptions(
+                                allow_origins=apigw.Cors.ALL_ORIGINS,
+                                allow_methods=apigw.Cors.ALL_METHODS
+                            ))
+
+        products = api.root.add_resource("products")
+        products.add_method("GET", apigw.LambdaIntegration(fn_products))
 
         users = api.root.add_resource("users")
         users.add_method("GET", apigw.LambdaIntegration(fn_users))
