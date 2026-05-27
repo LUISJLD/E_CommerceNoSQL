@@ -20,7 +20,7 @@ services:
       - DEFAULT_REGION=us-east-1
       - AWS_DEFAULT_REGION=us-east-1
       - DEBUG=0
-      - LAMBDA_KEEPALIVE_MS=600000
+      - LAMBDA_DOCKER_NETWORK=e_commercenosql_default
       - LAMBDA_REMOVE_CONTAINERS=0
       - AWS_ACCESS_KEY_ID=test
       - AWS_SECRET_ACCESS_KEY=test
@@ -30,6 +30,7 @@ services:
       - REDIS_PORT=6379
       - CACHE_TTL_SECONDS=30
       - CART_TTL_SECONDS=60
+      - LAMBDA_HOST_PROJECT_PATH=${LAMBDA_HOST_PROJECT_PATH:-}
     volumes:
       - "/var/run/docker.sock:/var/run/docker.sock"
       - "./localstack_data:/var/lib/localstack"

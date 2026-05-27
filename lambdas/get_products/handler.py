@@ -1,5 +1,5 @@
 import json, sys, os
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
+sys.path.insert(0, os.path.dirname(__file__))
 
 from shared.dynamo_client import get_table
 from shared.cache_client import cache_aside

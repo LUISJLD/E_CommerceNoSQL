@@ -11,7 +11,7 @@ dentro de contenedores Docker. Crea:
   - Escribe Frontend/.env con la URL final
 """
 
-import boto3, os, io, json, zipfile, time, sys, shutil, subprocess, tempfile
+import boto3, os, json, time, sys, shutil, subprocess
 from pathlib import Path
 
 # ── Configuración ─────────────────────────────────────────────────────────────
@@ -108,33 +108,44 @@ def create_lambda_role():
     print(f"  ✔ Rol '{role_name}' creado")
     return resp["Role"]["Arn"]
 
-# ── 3. Lambda ZIP ──────────────────────────────────────────────────────────────
-def _zip_lambda(handler_dir: str) -> bytes:
-    """Instala dependencias localmente y crea ZIP en memoria."""
-    with tempfile.TemporaryDirectory() as tmp:
-        # pip install
-        subprocess.run(
-            [sys.executable, "-m", "pip", "install", "boto3", "redis",
-             "-t", tmp, "-q"],
-            check=True,
-        )
-        # handler files
-        src = LAMBDAS / handler_dir
-        for item in src.iterdir():
-            dst = Path(tmp) / item.name
-            if item.is_file():
-                shutil.copy2(item, dst)
-            else:
-                shutil.copytree(item, dst, dirs_exist_ok=True)
-        # shared/
-        shutil.copytree(SHARED, Path(tmp) / "shared", dirs_exist_ok=True)
+# ── 3. Lambda (hot-reload) ────────────────────────────────────────────────────
+# LocalStack hot-reload: usa S3Bucket="hot-reload" y S3Key=ruta del HOST.
+# Docker daemon monta esa ruta del host en /var/task del container Lambda.
+# Cold start <1s y cambios al código se reflejan sin redeployar.
 
-        buf = io.BytesIO()
-        with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as zf:
-            for path in Path(tmp).rglob("*"):
-                if path.is_file():
-                    zf.write(path, path.relative_to(tmp))
-        return buf.getvalue()
+def _detect_host_lambdas_path() -> str:
+    """Detecta la ruta del host donde están las lambdas.
+
+    En Docker-in-Docker, /app/lambdas es interna. Necesitamos la ruta
+    que Docker daemon (host) usa para montar ese volumen.
+    """
+    # 1. Variable explícita del compose
+    host_path = os.getenv("LAMBDA_HOST_PROJECT_PATH")
+    if host_path:
+        return host_path.replace("\\", "/") + "/lambdas"
+
+    # 2. Docker inspect del container actual
+    import subprocess as sp
+    try:
+        result = sp.run(
+            ["docker", "inspect", "localstack",
+             "--format", '{{range .Mounts}}{{if eq .Destination "/app/lambdas"}}{{.Source}}{{end}}{{end}}'],
+            capture_output=True, text=True, timeout=5
+        )
+        if result.returncode == 0 and result.stdout.strip():
+            return result.stdout.strip().replace("\\", "/")
+    except Exception:
+        pass
+
+    # 3. Fallback — ruta interna (funciona si LocalStack corre sin Docker-in-Docker)
+    return "/app/lambdas"
+
+def _prepare_lambda_dir(handler_dir: str) -> None:
+    """Copia shared/ dentro del directorio del handler para hot-reload."""
+    src = LAMBDAS / handler_dir
+    shared_dst = src / "shared"
+    if not shared_dst.exists():
+        shutil.copytree(SHARED, shared_dst, dirs_exist_ok=True)
 
 def create_lambdas(role_arn: str) -> dict[str, str]:
     lam = boto("lambda")
@@ -142,8 +153,8 @@ def create_lambdas(role_arn: str) -> dict[str, str]:
         "TABLE_NAME":            TABLE,
         "DYNAMODB_ENDPOINT_URL": ENDPOINT,
         "REDIS_URL":             f"redis://{REDIS_HOST}:{REDIS_PORT}/1",
-        "CACHE_TTL_SECONDS":     "60",
-        "CART_TTL_SECONDS":      "300",
+        "CACHE_TTL_SECONDS":     os.getenv("CACHE_TTL_SECONDS", "30"),
+        "CART_TTL_SECONDS":      os.getenv("CART_TTL_SECONDS", "60"),
         "APP_REGION":            REGION,
     }
     handlers = {
@@ -156,28 +167,46 @@ def create_lambdas(role_arn: str) -> dict[str, str]:
         "EcommerceLambda-ManageUserCart": "manage_cart",
         "EcommerceLambda-ManageProducts": "manage_products",
     }
+
+    # Instalar dependencias (redis) en cada handler para hot-reload
+    for handler_dir in handlers.values():
+        handler_path = LAMBDAS / handler_dir
+        marker = handler_path / "_deps_installed"
+        if not marker.exists():
+            subprocess.run(
+                [sys.executable, "-m", "pip", "install", "redis",
+                 "-t", str(handler_path), "-q"],
+                check=True,
+            )
+            marker.write_text("ok")
+    print("  ⚙  Dependencias instaladas en handlers")
+
+    host_lambdas = _detect_host_lambdas_path()
+    print(f"  📂 Host lambdas path: {host_lambdas}")
+
     arns = {}
     for fn_name, handler_dir in handlers.items():
-        print(f"  ⚙  Empaquetando {fn_name}...")
-        zip_bytes = _zip_lambda(handler_dir)
+        _prepare_lambda_dir(handler_dir)
+        hot_reload_path = f"{host_lambdas}/{handler_dir}"
+
         try:
             lam.get_function(FunctionName=fn_name)
             lam.delete_function(FunctionName=fn_name)
-            time.sleep(1)
+            time.sleep(0.5)
         except lam.exceptions.ResourceNotFoundException:
             pass
 
         try:
-            resp = lam.create_function(
+            lam.create_function(
                 FunctionName=fn_name,
                 Runtime="python3.12",
                 Role=role_arn,
                 Handler="handler.lambda_handler",
-                Code={"ZipFile": zip_bytes},
+                Code={"S3Bucket": "hot-reload", "S3Key": hot_reload_path},
                 Environment={"Variables": shared_env},
                 Timeout=30,
             )
-            print(f"  ✔ {fn_name} creado")
+            print(f"  ✔ {fn_name} → hot-reload ({hot_reload_path})")
         except Exception as e:
             print(f"  ❌ Error creando {fn_name}: {e}")
             raise
