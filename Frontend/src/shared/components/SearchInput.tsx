@@ -5,20 +5,15 @@ interface SearchInputProps {
 
 export default function SearchInput({ value, onChange }: SearchInputProps) {
   return (
-    <div className="flex border border-gray-400 rounded-sm bg-white">
+    <div className="flex items-center border border-gray-300 rounded-lg bg-white overflow-hidden focus-within:border-teal-500 focus-within:ring-1 focus-within:ring-teal-500 transition-all">
+      <i className="bi bi-search text-gray-400 text-xs pl-3"></i>
       <input
         type="text"
         placeholder="Buscar productos..."
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className="border-none px-3 py-1.5 text-sm w-52 outline-none bg-white"
+        className="px-2 py-2 text-sm w-full outline-none bg-transparent"
       />
-      <button
-        className="bg-white border-l border-gray-300 px-2.5 cursor-pointer hover:bg-gray-100"
-        aria-label="Buscar"
-      >
-        <i className="bi bi-search text-gray-600 text-xs"></i>
-      </button>
     </div>
   );
 }

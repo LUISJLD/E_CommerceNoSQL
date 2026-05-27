@@ -8,12 +8,18 @@ interface ProductGridProps {
 }
 
 export default function ProductGrid({ products, loading }: ProductGridProps) {
-  const { addItem } = useCart();
+  const { addItem, items } = useCart();
+
+  // Set de IDs que ya están en el carrito para feedback visual inmediato
+  const cartProductIds = new Set(items.map((i) => i.product.id));
 
   if (loading) {
     return (
       <div className="flex-1 flex items-center justify-center py-20">
-        <span className="text-gray-500 text-sm">Cargando...</span>
+        <div className="text-center">
+          <i className="bi bi-arrow-repeat text-3xl text-teal-400 animate-spin block mb-3"></i>
+          <span className="text-gray-400 text-sm">Cargando productos...</span>
+        </div>
       </div>
     );
   }
@@ -23,7 +29,12 @@ export default function ProductGrid({ products, loading }: ProductGridProps) {
       <h2 className="text-lg font-bold text-gray-900 mb-4">Nuestros Productos</h2>
       <div className="grid grid-cols-4 gap-4">
         {products.map((product) => (
-          <ProductCard key={product.id} product={product} onAddToCart={addItem} />
+          <ProductCard
+            key={product.id}
+            product={product}
+            onAddToCart={addItem}
+            inCart={cartProductIds.has(product.id)}
+          />
         ))}
       </div>
       {products.length === 0 && (

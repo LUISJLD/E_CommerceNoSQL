@@ -1,11 +1,4 @@
 services:
-  dynamodb:
-    image: amazon/dynamodb-local
-    container_name: dynamodb_local
-    ports:
-      - "3000:8000"
-    command: "-jar DynamoDBLocal.jar -sharedDb -inMemory"
-
   redis:
     image: redis:7-alpine
     container_name: redis_cache
@@ -23,46 +16,24 @@ services:
     ports:
       - "4566:4566"
     environment:
-      - SERVICES=cloudformation,s3,sts,lambda,apigateway,dynamodb,iam,logs,ec2,elasticache,ssm
+      - SERVICES=cloudformation,lambda,apigateway,dynamodb,iam,logs
       - DEFAULT_REGION=us-east-1
       - AWS_DEFAULT_REGION=us-east-1
       - LAMBDA_EXECUTOR=local
-      - DEBUG=1
+      - DEBUG=0
     volumes:
       - "/var/run/docker.sock:/var/run/docker.sock"
       - "./localstack_data:/var/lib/localstack"
 
-  web:
-    build: ./backend
-    container_name: django_app
-    ports:
-      - "8000:8000"
-    volumes:
-      - ./backend:/app
-    depends_on:
-      dynamodb:
-        condition: service_started
-      redis:
-        condition: service_healthy
-    environment:
-      - AWS_ACCESS_KEY_ID=local
-      - AWS_SECRET_ACCESS_KEY=local
-      - AWS_REGION_NAME=us-east-1
-      - DYNAMODB_ENDPOINT_URL=http://dynamodb:8000
-      - REDIS_URL=redis://redis:6379/1
-      - ECOMMERCE_CACHE_TTL_SECONDS=60
-      - ENVIRONMENT=development
-      - DEBUG=True
-
   frontend:
-    build: ./frontend
+    build: ./Frontend
     container_name: ecocart_frontend
     ports:
       - "5173:5173"
     volumes:
-      - ./frontend:/app
+      - ./Frontend:/app
       - /app/node_modules
     depends_on:
-      - web
+      - localstack
     environment:
-      - VITE_API_URL=http://localhost:8000/api
+      - VITE_API_URL=http://localhost:4566/restapis

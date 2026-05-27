@@ -1,10 +1,14 @@
 import os
 import json
 import boto3
-from redis_client import cache_aside, get_redis # Ajusta esta ruta si tu helper se llama diferente
+from boto3.dynamodb.conditions import Key
+from shared.cache_client import cache_aside, get_redis
 
 # Configuración dinámica de endpoints para LocalStack / Docker
-endpoint_url = os.environ.get("AWS_ENDPOINT_URL") or "http://localhost:4566"
+endpoint_url = os.environ.get(
+    "DYNAMODB_ENDPOINT_URL",
+    "http://localhost:4566"
+)
 if os.environ.get("LOCALSTACK_HOSTNAME"):
     endpoint_url = f"http://{os.environ.get('LOCALSTACK_HOSTNAME')}:4566"
 
@@ -28,11 +32,8 @@ def lambda_handler(event, context):
         if http_method == "GET":
             def fetch_from_dynamodb():
                 response = table.query(
-                    KeyConditionExpression="pk = :pk AND begins_with(sk, :sk)",
-                    ExpressionAttributeValues={
-                        ":pk": f"USER#{user_id}",
-                        ":sk": "CART#"
-                    }
+                    KeyConditionExpression=Key("pk").eq(f"USER#{user_id}") &
+                    Key("sk").begins_with("CART#")
                 )
                 items = response.get("Items", [])
                 # Limpiamos los prefijos de base de datos antes de responder
@@ -47,10 +48,14 @@ def lambda_handler(event, context):
             # Usamos el helper de tu archivo anterior (TTL por defecto desde env o 300s)
             ttl = int(os.environ.get("CART_TTL_SECONDS", 300))
             cart_data = cache_aside(redis_key, fetch_from_dynamodb, ttl=ttl)
+            
+            # cache_aside retorna {source, data}, extraer solo los datos
+            data = cart_data.get('data', []) if isinstance(cart_data, dict) else cart_data
+            
             return {
                 "statusCode": 200,
-                "headers": {"Access-Control-Allow-Origin": "*"},
-                "body": json.dumps(cart_data)
+                "headers": {"Access-Control-Allow-Origin": "*", "Content-Type": "application/json"},
+                "body": json.dumps(data)
             }
 
         # ----------------- FLUJO POST (AGREGAR/ACTUALIZAR PRODUCTO) -----------------
@@ -60,27 +65,32 @@ def lambda_handler(event, context):
             qty = body.get("qty")
             price = body.get("price")
 
-            if not all([product_id, qty, price]):
+            if not all([product_id, qty is not None, price is not None]):
                 return {"statusCode": 400, "body": json.dumps({"error": "Invalid JSON body structure"})}
 
-            # Guardar/Actualizar en DynamoDB (Single Table Design PK: USER#id, SK: CART#prod_id)
-            table.put_item(Item={
-                "pk": f"USER#{user_id}",
-                "sk": f"CART#{product_id}",
-                "qty": qty,
-                "price": price
-            })
+            # Incrementar qty si el producto ya existe, o insertar con qty inicial
+            table.update_item(
+                Key={
+                    "pk": f"USER#{user_id}",
+                    "sk": f"CART#{product_id}",
+                },
+                UpdateExpression="SET qty = if_not_exists(qty, :zero) + :inc, price = :price",
+                ExpressionAttributeValues={
+                    ":inc":   int(qty),
+                    ":zero":  0,
+                    ":price": price,
+                },
+            )
 
-            # Invalidación/Actualización de la caché en Redis
-            # Guardamos el producto individual en el Hash o simplemente limpiamos la key para forzar recarga
+            # Invalidar caché para que el próximo GET lea DynamoDB
             try:
-                redis_client.delete(redis_key) # Invalidación clásica: borramos para el siguiente GET
-            except Exception as ex:
-                pass 
+                redis_client.delete(redis_key)
+            except Exception:
+                pass
 
             return {
                 "statusCode": 200,
-                "headers": {"Access-Control-Allow-Origin": "*"},
+                "headers": {"Access-Control-Allow-Origin": "*", "Content-Type": "application/json"},
                 "body": json.dumps({"message": "Product added to cart successfully"})
             }
 
@@ -106,7 +116,7 @@ def lambda_handler(event, context):
 
             return {
                 "statusCode": 200,
-                "headers": {"Access-Control-Allow-Origin": "*"},
+                "headers": {"Access-Control-Allow-Origin": "*", "Content-Type": "application/json"},
                 "body": json.dumps({"message": "Product removed from cart successfully"})}
 
         else:

@@ -1,7 +1,7 @@
 // src/services/cart.service.ts
 
-// Capturamos la URL base que pusiste en el archivo .env
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
+// URL del API Gateway - usada por todas las integraciones
+const API_BASE_URL = import.meta.env.VITE_API_URL || "/api";
 
 export interface CartItem {
     productId: string;

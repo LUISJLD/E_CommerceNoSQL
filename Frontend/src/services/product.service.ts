@@ -1,18 +1,24 @@
 import type { Product } from "../shared/types";
 
-const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8000/api";
+// URL del API Gateway - usada por todas las integraciones
+const API_URL =
+  import.meta.env.VITE_API_URL || "/api";
 
+/**
+ * La Lambda de productos retorna: { source: "CACHE" | "DATABASE", data: [...] }
+ */
 export async function fetchProducts(category?: string): Promise<Product[]> {
   const params = category ? `?category=${encodeURIComponent(category)}` : "";
-  const res = await fetch(`${API_URL}/products/${params}`);
+  const res = await fetch(`${API_URL}/products${params}`);
 
   if (!res.ok) {
     throw new Error(`Error ${res.status} fetching products`);
   }
 
-  const data = await res.json();
+  const json = await res.json();
+  const items: Record<string, unknown>[] = Array.isArray(json) ? json : [];
 
-  return data.map((item: Record<string, unknown>) => ({
+  return items.map((item) => ({
     id: item.productId as string,
     name: item.name as string,
     price: Number(item.price),

@@ -27,8 +27,11 @@ def lambda_handler(event, context):
 
     items = cache_aside(cache_key, _fetch, TTL)
 
+    # cache_aside retorna {source, data}, extraer solo los datos
+    data = items.get('data', []) if isinstance(items, dict) else items
+
     return {
         "statusCode": 200,
-        "headers": {"Content-Type": "application/json"},
-        "body": json.dumps(items, default=str)
+        "headers": {"Content-Type": "application/json", "Access-Control-Allow-Origin": "*"},
+        "body": json.dumps(data, default=str)
     }

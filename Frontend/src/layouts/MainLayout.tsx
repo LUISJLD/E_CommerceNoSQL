@@ -6,15 +6,28 @@ interface MainLayoutProps {
   children: ReactNode;
   searchQuery: string;
   onSearchChange: (value: string) => void;
+  activePage: "shop" | "orders";
+  onNavigate: (page: "shop" | "orders") => void;
 }
 
-export default function MainLayout({ children, searchQuery, onSearchChange }: MainLayoutProps) {
+export default function MainLayout({
+  children,
+  searchQuery,
+  onSearchChange,
+  activePage,
+  onNavigate,
+}: MainLayoutProps) {
   return (
-    <div className="min-h-screen flex flex-col bg-white">
-      <Header searchQuery={searchQuery} onSearchChange={onSearchChange} />
-      <div className="flex flex-1 max-w-[1200px] mx-auto w-full px-8 py-6 gap-8">
+    <div className="min-h-screen flex flex-col bg-gray-50">
+      <Header
+        searchQuery={searchQuery}
+        onSearchChange={onSearchChange}
+        activePage={activePage}
+        onNavigate={onNavigate}
+      />
+      <main className="flex flex-1 max-w-[1200px] mx-auto w-full px-8 py-6 gap-6">
         {children}
-      </div>
+      </main>
       <Footer />
     </div>
   );

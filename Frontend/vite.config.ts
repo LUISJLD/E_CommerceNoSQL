@@ -1,12 +1,23 @@
 import { defineConfig } from 'vite'
-import react, { reactCompilerPreset } from '@vitejs/plugin-react'
-import babel from '@rolldown/plugin-babel'
+import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 
 export default defineConfig({
   plugins: [
     tailwindcss(),
     react(),
-    babel({ presets: [reactCompilerPreset()] })
   ],
+  server: {
+    proxy: {
+      '/api': {
+        target: 'http://localhost:4566/restapis',
+        changeOrigin: true,
+        rewrite: (path) => {
+          // Lee el ID real del API Gateway desde env o archivo
+          const apiId = process.env.VITE_API_ID || 'PLACEHOLDER'
+          return path.replace(/^\/api/, `/${apiId}/prod/_user_request_`)
+        },
+      },
+    },
+  },
 })

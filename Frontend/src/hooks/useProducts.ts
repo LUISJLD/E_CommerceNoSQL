@@ -3,7 +3,7 @@ import type { Product } from "../shared/types";
 import { fetchProducts, filterProducts } from "../services/product.service";
 
 export function useProducts() {
-  const [products, setProducts] = useState<Product[]>([]);
+  const [allProducts, setAllProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [query, setQuery] = useState("");
@@ -12,7 +12,7 @@ export function useProducts() {
   useEffect(() => {
     fetchProducts()
       .then((data) => {
-        setProducts(data);
+        setAllProducts(data);
         setError(null);
       })
       .catch((err) => {
@@ -22,12 +22,13 @@ export function useProducts() {
   }, []);
 
   const filtered = useMemo(
-    () => filterProducts(products, query, category),
-    [products, query, category]
+    () => filterProducts(allProducts, query, category),
+    [allProducts, query, category]
   );
 
   return {
     products: filtered,
+    allProducts,       // catálogo completo sin filtrar, para el CartProvider
     loading,
     error,
     query,

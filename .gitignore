@@ -8,6 +8,7 @@ __pycache__/
 .env.local
 .env.development
 .env.test
+.env.example
 venv/
 env/
 ENV/

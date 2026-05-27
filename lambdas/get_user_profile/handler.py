@@ -25,15 +25,18 @@ def lambda_handler(event, context):
 
     item = cache_aside(cache_key, _fetch, TTL)
 
-    if not item:
+    # cache_aside retorna {source, data}, extraer solo los datos
+    data = item.get('data') if isinstance(item, dict) else item
+
+    if not data:
         return {
             "statusCode": 404,
-            "headers": {"Content-Type": "application/json"},
+            "headers": {"Content-Type": "application/json", "Access-Control-Allow-Origin": "*"},
             "body": json.dumps({"error": "Perfil no encontrado"})
         }
 
     return {
         "statusCode": 200,
-        "headers": {"Content-Type": "application/json"},
-        "body": json.dumps(item, default=str)
+        "headers": {"Content-Type": "application/json", "Access-Control-Allow-Origin": "*"},
+        "body": json.dumps(data, default=str)
     }

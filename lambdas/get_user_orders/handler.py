@@ -125,4 +125,12 @@ def lambda_handler(event, context):
     # ORDERS endpoint (existing behavior)
     cache_key = f'user:orders:{user_id}'
     items = cache_aside(cache_key, lambda: _fetch_orders(table, user_id), CACHE_TTL)
-    return {"statusCode": 200, "headers": {"Content-Type": "application/json"}, "body": json.dumps(items, default=str)}
+    
+    # cache_aside retorna {source, data}, extraer solo los datos
+    data = items.get('data', []) if isinstance(items, dict) else items
+    
+    return {
+        "statusCode": 200,
+        "headers": {"Content-Type": "application/json", "Access-Control-Allow-Origin": "*"},
+        "body": json.dumps(data, default=str)
+    }

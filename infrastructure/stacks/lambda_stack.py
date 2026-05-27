@@ -1,4 +1,4 @@
-from aws_cdk import Stack, Duration
+from aws_cdk import Stack, Duration, CfnOutput
 from aws_cdk import aws_lambda as _lambda
 from aws_cdk import aws_apigateway as apigw
 from aws_cdk import aws_dynamodb as dynamodb
@@ -15,6 +15,9 @@ class LambdaStack(Stack):
         shared_env = {
             "TABLE_NAME": dynamo_table.table_name,
             "DYNAMODB_ENDPOINT_URL": "http://localstack:4566",
+            # En LocalStack con LAMBDA_EXECUTOR=local, las Lambdas corren en el mismo
+            # proceso/red que el contenedor de LocalStack, por lo que deben usar el
+            # nombre del servicio Docker "redis_cache" en lugar de "localhost".
             "REDIS_URL": f"redis://{redis_host}:{redis_port}/1",
             "CACHE_TTL_SECONDS": "60",
             "CART_TTL_SECONDS": "300",
@@ -26,6 +29,8 @@ class LambdaStack(Stack):
                 self, name,
                 runtime=_lambda.Runtime.PYTHON_3_12,
                 handler="handler.lambda_handler",
+                # ─── AGREGAMOS NOMBRE FIJO BASADO EN EL ID ───
+                function_name=f"EcommerceLambda-{name}", 
                 code=_lambda.Code.from_asset(
                     "../lambdas",
                     bundling={
@@ -100,3 +105,12 @@ class LambdaStack(Stack):
         order.add_method("GET", apigw.LambdaIntegration(fn_order_by_id))
         order.add_resource("items").add_method("GET",
             apigw.LambdaIntegration(fn_order_items))
+
+        # ── Output del API Gateway ──────────────────────────────────────────
+        # El script update-env.py lee este output para actualizar el .env del frontend
+        # automáticamente después de cada deploy, sin tener que copiar el ID a mano.
+        CfnOutput(self, "ApiGatewayUrl",
+            value=f"http://localhost:4566/restapis/{api.rest_api_id}/prod/_user_request_",
+            description="URL base del API Gateway en LocalStack",
+            export_name="EcommerceApiUrl",
+        )
