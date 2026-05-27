@@ -114,6 +114,91 @@ class EcommerceService:
         return EcommerceService._cache_aside(cache_key, _fetch_order)
 
     @staticmethod
+    def create_product(name, price, stock, category, image='', product_id=None):
+        import uuid
+        from decimal import Decimal
+        pid = product_id or str(uuid.uuid4())[:8]
+        EcommerceService.table.put_item(Item={
+            'pk': 'CATALOG#main',
+            'sk': f'PRODUCT#{pid}',
+            'productId': pid,
+            'name': name,
+            'price': Decimal(str(price)),
+            'stock': int(stock),
+            'category': category,
+            'image': image,
+        })
+        try:
+            cache.delete(f'products:all:all')
+            cache.delete(f'products:all:{category}')
+        except Exception:
+            pass
+        return pid
+
+    @staticmethod
+    def delete_product(product_id):
+        existing = EcommerceService.table.get_item(
+            Key={'pk': 'CATALOG#main', 'sk': f'PRODUCT#{product_id}'}
+        ).get('Item')
+        category = existing.get('category') if existing else None
+        EcommerceService.table.delete_item(
+            Key={'pk': 'CATALOG#main', 'sk': f'PRODUCT#{product_id}'}
+        )
+        try:
+            cache.delete('products:all:all')
+            if category:
+                cache.delete(f'products:all:{category}')
+        except Exception:
+            pass
+
+    @staticmethod
+    def get_user_cart(user_id):
+        cache_key = f'cart:{user_id}'
+
+        def _fetch_cart():
+            response = EcommerceService.table.query(
+                KeyConditionExpression=Key('pk').eq(f'USER#{user_id}') &
+                                       Key('sk').begins_with('CART#')
+            )
+            return [
+                {
+                    'productId': item['sk'].replace('CART#', ''),
+                    'qty': int(item.get('qty', 1)),
+                    'price': float(item.get('price', 0)),
+                }
+                for item in response.get('Items', [])
+            ]
+
+        return EcommerceService._cache_aside(cache_key, _fetch_cart, ttl=300)
+
+    @staticmethod
+    def add_to_cart(user_id, product_id, qty, price):
+        from decimal import Decimal
+        EcommerceService.table.update_item(
+            Key={'pk': f'USER#{user_id}', 'sk': f'CART#{product_id}'},
+            UpdateExpression='SET qty = if_not_exists(qty, :zero) + :inc, price = :price',
+            ExpressionAttributeValues={
+                ':inc': int(qty),
+                ':zero': 0,
+                ':price': Decimal(str(price)),
+            },
+        )
+        try:
+            cache.delete(f'cart:{user_id}')
+        except Exception:
+            pass
+
+    @staticmethod
+    def remove_from_cart(user_id, product_id):
+        EcommerceService.table.delete_item(
+            Key={'pk': f'USER#{user_id}', 'sk': f'CART#{product_id}'}
+        )
+        try:
+            cache.delete(f'cart:{user_id}')
+        except Exception:
+            pass
+
+    @staticmethod
     def get_all_products(category=None):
         cache_key = f'products:all:{category or "all"}'
 
