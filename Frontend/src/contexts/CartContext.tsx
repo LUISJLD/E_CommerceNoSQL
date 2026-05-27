@@ -121,12 +121,12 @@ export function CartProvider({
         return;
       }
 
-      const result = await response.json();
+      const source = response.headers.get("X-Cache-Source");
+      setCacheSource(source === "CACHE" ? "CACHE" : source === "DATABASE" ? "DATABASE" : "UNKNOWN");
       const elapsed = Math.round(performance.now() - start);
-
-      // Las lambdas retornan arrays directos, no objetos {source, data}
-      setCacheSource("UNKNOWN");
       setResponseTime(elapsed);
+
+      const result = await response.json();
 
       const backendItems: Array<{ productId: string; qty: number; price: number }> =
         Array.isArray(result) ? result : [];
