@@ -52,7 +52,7 @@ def cache_aside(key: str, fetch_fn, ttl: int = 60):
 
     try:
         cached = r.get(key)
-        if cached:
+        if cached is not None:
             logger.info("Cache HIT for key: %s", key)
             return {
                 "source": "CACHE",
@@ -61,7 +61,7 @@ def cache_aside(key: str, fetch_fn, ttl: int = 60):
     except Exception as e:
         logger.warning("Cache read failed for key %s: %s", key, e)
 
-    logger.info("Cache MISS for key: %s — fetching from DynamoDB", key)
+    logger.info("Cache MISS for key: %s - fetching from DynamoDB", key)
     value = fetch_fn()
 
     try:

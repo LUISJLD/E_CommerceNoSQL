@@ -68,11 +68,16 @@ class LambdaStack(Stack):
 
         # Configuración del API Gateway Central
         api = apigw.RestApi(self, "EcommerceApi",
-                            rest_api_name="ecommerce-serverless",
-                            default_cors_preflight_options=apigw.CorsOptions(
-                                allow_origins=apigw.Cors.ALL_ORIGINS,
-                                allow_methods=apigw.Cors.ALL_METHODS
-                            ))
+        rest_api_name="ecommerce-serverless",
+        deploy_options=apigw.StageOptions(stage_name="prod"),
+        default_cors_preflight_options=apigw.CorsOptions(
+        allow_origins=apigw.Cors.ALL_ORIGINS,
+        allow_methods=apigw.Cors.ALL_METHODS,
+    ))
+        
+         # LocalStack: fuerza un ID estable en lugar de uno aleatorio
+        from aws_cdk import Tags
+        Tags.of(api).add("_custom_id_", "ecommerce123")
 
         # Enrutamiento del Carrito corregido mapeado a fn_cart
         cart_root = api.root.add_resource("cart")

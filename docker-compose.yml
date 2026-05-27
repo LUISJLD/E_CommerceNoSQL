@@ -16,14 +16,16 @@ services:
     ports:
       - "4566:4566"
     environment:
-      - SERVICES=cloudformation,lambda,apigateway,dynamodb,iam,logs
+      - SERVICES=cloudformation,lambda,apigateway,dynamodb,iam,logs,ssm,s3,sts,ecr
       - DEFAULT_REGION=us-east-1
       - AWS_DEFAULT_REGION=us-east-1
-      - LAMBDA_EXECUTOR=local
+      - LAMBDA_DOCKER_NETWORK=${COMPOSE_PROJECT_NAME:-proyecto}_default
       - DEBUG=0
     volumes:
       - "/var/run/docker.sock:/var/run/docker.sock"
       - "./localstack_data:/var/lib/localstack"
+    networks:
+      - default
 
   frontend:
     build: ./Frontend
@@ -35,5 +37,3 @@ services:
       - /app/node_modules
     depends_on:
       - localstack
-    environment:
-      - VITE_API_URL=http://localhost:4566/restapis
