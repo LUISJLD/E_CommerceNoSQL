@@ -35,8 +35,8 @@ def lambda_handler(event, context):
 
     result = cache_aside(cache_key, _fetch, TTL)
 
-    # cache_aside retorna {source, data}, extraer solo los datos
-    data = result.get('data', []) if isinstance(result, dict) else result
+    source = result.get('source', 'UNKNOWN') if isinstance(result, dict) else 'UNKNOWN'
+    data   = result.get('data', [])           if isinstance(result, dict) else result
 
     return {
         "statusCode": 200,
@@ -44,7 +44,9 @@ def lambda_handler(event, context):
             "Content-Type": "application/json",
             "Access-Control-Allow-Origin": "*",
             "Access-Control-Allow-Headers": "Content-Type",
-            "Access-Control-Allow-Methods": "OPTIONS,GET"
+            "Access-Control-Allow-Methods": "OPTIONS,GET",
+            "Access-Control-Expose-Headers": "X-Cache-Source",
+            "X-Cache-Source": source,
         },
         "body": json.dumps(data, default=str)
     }

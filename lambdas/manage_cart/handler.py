@@ -54,7 +54,12 @@ def lambda_handler(event, context):
             
             return {
                 "statusCode": 200,
-                "headers": {"Access-Control-Allow-Origin": "*", "Content-Type": "application/json"},
+                "headers": {
+                    "Access-Control-Allow-Origin": "*",
+                    "Content-Type": "application/json",
+                    "Access-Control-Expose-Headers": "X-Cache-Source",
+                    "X-Cache-Source": cart_data.get("source", "UNKNOWN") if isinstance(cart_data, dict) else "UNKNOWN",
+                },
                 "body": json.dumps(data)
             }
 
