@@ -19,7 +19,8 @@ services:
       - SERVICES=cloudformation,lambda,apigateway,dynamodb,iam,logs,ssm,s3,sts,ecr
       - DEFAULT_REGION=us-east-1
       - AWS_DEFAULT_REGION=us-east-1
-      - LAMBDA_DOCKER_NETWORK=${COMPOSE_PROJECT_NAME:-proyecto}_default
+      - LAMBDA_DOCKER_NETWORK=e_commercenosql_default
+      - LAMBDA_RUNTIME_ENVIRONMENT_TIMEOUT=60
       - DEBUG=0
     volumes:
       - "/var/run/docker.sock:/var/run/docker.sock"

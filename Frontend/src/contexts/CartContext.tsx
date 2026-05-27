@@ -160,10 +160,9 @@ export function CartProvider({
     try {
       console.log("[Cart] POST", product.id, "→", userId);
       const response = await fetch(`${API_URL}/cart/${userId}`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ productId: product.id, qty: 1, price: product.price }),
-      });
+  method: "POST",
+  body: JSON.stringify({ productId: product.id, qty: 1, price: product.price }),
+});
 
       if (!response.ok) {
         console.error("[Cart] POST error:", response.status, response.statusText);
