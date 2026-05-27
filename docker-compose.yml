@@ -19,11 +19,28 @@ services:
       - SERVICES=cloudformation,lambda,apigateway,dynamodb,iam,logs
       - DEFAULT_REGION=us-east-1
       - AWS_DEFAULT_REGION=us-east-1
-      - LAMBDA_EXECUTOR=local
       - DEBUG=0
+      - LAMBDA_KEEPALIVE_MS=600000
+      - LAMBDA_REMOVE_CONTAINERS=0
+      - AWS_ACCESS_KEY_ID=test
+      - AWS_SECRET_ACCESS_KEY=test
+      - DYNAMODB_ENDPOINT_URL=http://localstack:4566
+      - TABLE_NAME=Ecommerce
+      - REDIS_HOST=redis_cache
+      - REDIS_PORT=6379
+      - CACHE_TTL_SECONDS=30
+      - CART_TTL_SECONDS=60
     volumes:
       - "/var/run/docker.sock:/var/run/docker.sock"
       - "./localstack_data:/var/lib/localstack"
+      - "./infrastructure/init-localstack.sh:/etc/localstack/init/ready.d/01_init.sh"
+      - "./infrastructure/deploy.py:/etc/localstack/init/ready.d/01_deploy.py"
+      - "./seed-data.py:/etc/localstack/init/ready.d/02_seed.py"
+      - "./lambdas:/app/lambdas"
+      - "./Frontend:/app/Frontend"
+    depends_on:
+      redis:
+        condition: service_healthy
 
   frontend:
     build: ./Frontend
@@ -34,6 +51,7 @@ services:
       - ./Frontend:/app
       - /app/node_modules
     depends_on:
-      - localstack
+      localstack:
+        condition: service_healthy
     environment:
-      - VITE_API_URL=http://localhost:4566/restapis
+      - VITE_LOCALSTACK_HOST=http://localstack:4566
