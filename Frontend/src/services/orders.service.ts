@@ -17,24 +17,39 @@ export interface OrderItem {
   price: number;
 }
 
+export interface OrdersResult {
+  orders: Order[];
+  cacheSource: "CACHE" | "DATABASE" | "UNKNOWN";
+  responseTime: number;
+}
+
 /**
  * GET /user/{userId}/orders
- * La Lambda retorna un array directo.
  */
-export async function fetchUserOrders(userId: string): Promise<Order[]> {
+export async function fetchUserOrders(userId: string): Promise<OrdersResult> {
+  const start = performance.now();
   const res = await fetch(`${API_URL}/user/${userId}/orders`);
+  const elapsed = Math.round(performance.now() - start);
   if (!res.ok) throw new Error(`Error ${res.status} fetching orders`);
+
+  const src = res.headers.get("X-Cache-Source");
+  const cacheSource: "CACHE" | "DATABASE" | "UNKNOWN" =
+    src === "CACHE" ? "CACHE" : src === "DATABASE" ? "DATABASE" : "UNKNOWN";
 
   const json = await res.json();
   const items: Record<string, unknown>[] = Array.isArray(json) ? json : [];
 
-  return items.map((item) => ({
-    orderId: (item.orderId as string) ?? (item.sk as string)?.replace("ORDER#", "") ?? "",
-    status: (item.status as string) ?? "UNKNOWN",
-    total: Number(item.total ?? 0),
-    createdAt: (item.createdAt as string) ?? (item.created_at as string) ?? "",
-    sk: (item.sk as string) ?? "",
-  }));
+  return {
+    orders: items.map((item) => ({
+      orderId: (item.orderId as string) ?? (item.sk as string)?.replace("ORDER#", "") ?? "",
+      status: (item.status as string) ?? "UNKNOWN",
+      total: Number(item.total ?? 0),
+      createdAt: (item.createdAt as string) ?? (item.created_at as string) ?? "",
+      sk: (item.sk as string) ?? "",
+    })),
+    cacheSource,
+    responseTime: elapsed,
+  };
 }
 
 /**

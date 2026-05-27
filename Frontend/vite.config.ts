@@ -9,14 +9,10 @@ export default defineConfig({
   ],
   server: {
     proxy: {
-      '/api': {
-        target: 'http://localhost:4566/restapis',
+      '/localstack': {
+        target: process.env.VITE_LOCALSTACK_HOST || 'http://localhost:4566',
         changeOrigin: true,
-        rewrite: (path) => {
-          // Lee el ID real del API Gateway desde env o archivo
-          const apiId = process.env.VITE_API_ID || 'PLACEHOLDER'
-          return path.replace(/^\/api/, `/${apiId}/prod/_user_request_`)
-        },
+        rewrite: (path) => path.replace(/^\/localstack/, ''),
       },
     },
   },

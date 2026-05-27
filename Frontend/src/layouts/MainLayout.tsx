@@ -6,8 +6,8 @@ interface MainLayoutProps {
   children: ReactNode;
   searchQuery: string;
   onSearchChange: (value: string) => void;
-  activePage: "shop" | "orders";
-  onNavigate: (page: "shop" | "orders") => void;
+  activePage: "shop" | "orders" | "admin";
+  onNavigate: (page: "shop" | "orders" | "admin") => void;
 }
 
 export default function MainLayout({
