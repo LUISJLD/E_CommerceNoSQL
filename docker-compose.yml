@@ -16,7 +16,7 @@ services:
     ports:
       - "4566:4566"
     environment:
-      - SERVICES=cloudformation,lambda,apigateway,dynamodb,iam,logs,ssm,s3,sts,ecr
+      - SERVICES=cloudformation,lambda,apigateway,dynamodb,iam,logs,s3,ssm,sts,ecr
       - DEFAULT_REGION=us-east-1
       - AWS_DEFAULT_REGION=us-east-1
       - LAMBDA_DOCKER_NETWORK=e_commercenosql_default
