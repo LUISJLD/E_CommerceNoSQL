@@ -18,8 +18,7 @@
       "_type": "environment",
       "name": "Local (Docker)",
       "data": {
-        "base_url": "http://localhost:5173/localstack/restapis/{{ api_id }}/prod/_user_request_",
-        "api_id": "REPLACE_WITH_YOUR_API_ID",
+        "base_url": "http://localhost:5173/api",
         "token": ""
       }
     },

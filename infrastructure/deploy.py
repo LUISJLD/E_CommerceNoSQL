@@ -140,12 +140,27 @@ def _detect_host_lambdas_path() -> str:
     # 3. Fallback — ruta interna (funciona si LocalStack corre sin Docker-in-Docker)
     return "/app/lambdas"
 
+def _install_shared_deps() -> None:
+    """Instala dependencias (redis, PyJWT) una sola vez en lambdas/shared/.
+    Al copiar shared/ a cada handler, las deps van incluidas automáticamente."""
+    marker = SHARED / "_deps_installed"
+    if marker.exists():
+        return
+    subprocess.run(
+        [sys.executable, "-m", "pip", "install", "redis", "PyJWT",
+         "-t", str(SHARED), "-q"],
+        check=True,
+    )
+    marker.write_text("ok")
+    print("  ⚙  Dependencias instaladas en shared/")
+
 def _prepare_lambda_dir(handler_dir: str) -> None:
-    """Copia shared/ dentro del directorio del handler para hot-reload."""
+    """Copia shared/ (con deps incluidas) dentro del directorio del handler."""
     src = LAMBDAS / handler_dir
     shared_dst = src / "shared"
-    if not shared_dst.exists():
-        shutil.copytree(SHARED, shared_dst, dirs_exist_ok=True)
+    if shared_dst.exists():
+        shutil.rmtree(shared_dst)
+    shutil.copytree(SHARED, shared_dst, dirs_exist_ok=True)
 
 def create_lambdas(role_arn: str) -> dict[str, str]:
     lam = boto("lambda")
@@ -171,19 +186,7 @@ def create_lambdas(role_arn: str) -> dict[str, str]:
         "EcommerceLambda-ManageOrders":   "manage_orders",
     }
 
-    # Instalar dependencias en cada handler para hot-reload
-    for handler_dir in handlers.values():
-        handler_path = LAMBDAS / handler_dir
-        marker = handler_path / "_deps_installed"
-        if not marker.exists():
-            deps = ["redis", "PyJWT"]
-            subprocess.run(
-                [sys.executable, "-m", "pip", "install", *deps,
-                 "-t", str(handler_path), "-q"],
-                check=True,
-            )
-            marker.write_text("ok")
-    print("  ⚙  Dependencias instaladas en handlers")
+    _install_shared_deps()
 
     host_lambdas = _detect_host_lambdas_path()
     print(f"  📂 Host lambdas path: {host_lambdas}")
@@ -386,14 +389,14 @@ def create_api_gateway(arns: dict[str, str]) -> str:
 
 # ── 5. Escribir client/.env ──────────────────────────────────────────────────
 def write_frontend_env(api_id: str):
-    vite_url = f"/localstack/restapis/{api_id}/prod/_user_request_"
     env_file = FRONTEND / ".env"
     env_file.write_text(
         "# Generado automáticamente por infrastructure/deploy.py\n"
-        f"VITE_API_URL={vite_url}\n",
+        "VITE_API_URL=/api\n"
+        f"VITE_API_ID={api_id}\n",
         encoding="utf-8",
     )
-    print(f"  ✔ client/.env → VITE_API_URL={vite_url}")
+    print(f"  ✔ client/.env → VITE_API_URL=/api, VITE_API_ID={api_id}")
 
 # ── Main ───────────────────────────────────────────────────────────────────────
 if __name__ == "__main__":
