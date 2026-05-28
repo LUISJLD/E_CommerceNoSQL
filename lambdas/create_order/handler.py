@@ -65,9 +65,9 @@ def lambda_handler(event, context):
                 'status': 'Pendiente',
                 'createdAt': now,
             })
-            
+
             # Items de la orden
-            for idx, item in enumerate(items):
+            for item in items:
                 batch.put_item(Item={
                     'pk': f'ORDER#{order_id}',
                     'sk': f'ITEM#{item["productId"]}',
@@ -76,7 +76,7 @@ def lambda_handler(event, context):
                     'price': Decimal(str(item["price"])),
                     'subtotal': Decimal(str(item["price"])) * item["qty"]
                 })
-                
+
             # Eliminar items del carrito de DynamoDB
             for item in items:
                 batch.delete_item(Key={
@@ -84,8 +84,24 @@ def lambda_handler(event, context):
                     'sk': f'CART#{item["productId"]}'
                 })
 
-        # Limpiar caché de Redis
+        # Descontar stock de cada producto
+        for item in items:
+            try:
+                table.update_item(
+                    Key={'pk': 'CATALOG#main', 'sk': f'PRODUCT#{item["productId"]}'},
+                    UpdateExpression='SET stock = stock - :qty',
+                    ConditionExpression='stock >= :qty',
+                    ExpressionAttributeValues={':qty': item["qty"]},
+                )
+            except table.meta.client.exceptions.ConditionalCheckFailedException:
+                logging.warning("Stock insuficiente para %s, se procesó igual", item["productId"])
+
+        # Limpiar caché de Redis (carrito + productos)
         _invalidate(user_id)
+        try:
+            get_redis().delete("products:all")
+        except Exception:
+            pass
 
         return response(201, {"message": "Orden creada con éxito", "orderId": order_id, "total": float(total)})
 
