@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState } from 'react';
 import { jwtDecode } from 'jwt-decode';
 
 interface User {
@@ -14,36 +14,35 @@ interface AuthContextType {
   logout: () => void;
   isAuthenticated: boolean;
   isAdmin: boolean;
+  isLoading: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [user, setUser] = useState<User | null>(null);
-  const [token, setToken] = useState<string | null>(null);
-
-  useEffect(() => {
-    // Restaurar sesión desde localStorage al cargar
-    const storedToken = localStorage.getItem('ecommerce_token');
-    if (storedToken) {
-      try {
-        const decoded: any = jwtDecode(storedToken);
-        // Validar expiración
-        if (decoded.exp * 1000 < Date.now()) {
-          logout();
-        } else {
-          setToken(storedToken);
-          setUser({
-            email: decoded.email,
-            name: decoded.name,
-            role: decoded.role,
-          });
-        }
-      } catch (err) {
-        logout();
-      }
+function getInitialAuth(): { token: string | null; user: User | null } {
+  const storedToken = localStorage.getItem('ecommerce_token');
+  if (!storedToken) return { token: null, user: null };
+  try {
+    const decoded: any = jwtDecode(storedToken);
+    if (decoded.exp * 1000 < Date.now()) {
+      localStorage.removeItem('ecommerce_token');
+      return { token: null, user: null };
     }
-  }, []);
+    return {
+      token: storedToken,
+      user: { email: decoded.email, name: decoded.name, role: decoded.role },
+    };
+  } catch {
+    localStorage.removeItem('ecommerce_token');
+    return { token: null, user: null };
+  }
+}
+
+export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const [initial] = useState(getInitialAuth);
+  const [user, setUser] = useState<User | null>(initial.user);
+  const [token, setToken] = useState<string | null>(initial.token);
+  const [isLoading] = useState(false);
 
   const login = (newToken: string, userData: User) => {
     localStorage.setItem('ecommerce_token', newToken);
@@ -66,6 +65,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         logout,
         isAuthenticated: !!user,
         isAdmin: user?.role === 'admin',
+        isLoading,
       }}
     >
       {children}
