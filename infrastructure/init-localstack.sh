@@ -9,7 +9,7 @@ python3 /etc/localstack/init/ready.d/02_seed.py
 
 # Pre-calentar Lambdas (cold start en background para que estén listas cuando el frontend cargue)
 echo "[init] Calentando Lambdas..."
-API_URL=$(grep VITE_API_URL /app/Frontend/.env 2>/dev/null | cut -d= -f2)
+API_URL=$(grep VITE_API_URL /app/client/.env 2>/dev/null | cut -d= -f2)
 if [ -n "$API_URL" ]; then
   BASE="http://localhost:4566${API_URL#/localstack}"
   curl -s "$BASE/products" > /dev/null 2>&1 &

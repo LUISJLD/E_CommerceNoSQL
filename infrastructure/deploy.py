@@ -8,7 +8,7 @@ dentro de contenedores Docker. Crea:
   - Rol IAM para Lambdas
   - 8 funciones Lambda (zipeadas localmente)
   - API Gateway REST + todas las rutas
-  - Escribe Frontend/.env con la URL final
+  - Escribe client/.env con la URL final
 """
 
 import boto3, os, json, time, sys, shutil, subprocess
@@ -27,7 +27,7 @@ _HERE      = Path(globals().get("__file__", "/etc/localstack/init/ready.d/01_dep
 ROOT       = Path("/app") if Path("/app/lambdas").exists() else _HERE.parent.parent
 LAMBDAS    = ROOT / "lambdas"
 SHARED     = LAMBDAS / "shared"
-FRONTEND   = ROOT / "Frontend"
+FRONTEND   = ROOT / "client"
 
 SESSION_KWARGS = dict(
     region_name=REGION,
@@ -351,7 +351,7 @@ def create_api_gateway(arns: dict[str, str]) -> str:
 
     return api_id
 
-# ── 5. Escribir Frontend/.env ──────────────────────────────────────────────────
+# ── 5. Escribir client/.env ──────────────────────────────────────────────────
 def write_frontend_env(api_id: str):
     vite_url = f"/localstack/restapis/{api_id}/prod/_user_request_"
     env_file = FRONTEND / ".env"
@@ -360,7 +360,7 @@ def write_frontend_env(api_id: str):
         f"VITE_API_URL={vite_url}\n",
         encoding="utf-8",
     )
-    print(f"  ✔ Frontend/.env → VITE_API_URL={vite_url}")
+    print(f"  ✔ client/.env → VITE_API_URL={vite_url}")
 
 # ── Main ───────────────────────────────────────────────────────────────────────
 if __name__ == "__main__":
