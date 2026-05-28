@@ -1,11 +1,18 @@
 # Ignore Python bytecode files
 *.pyc
-__pycache__/    
+__pycache__/
 
 # Ignore environment variables files
 .env
 .env.production
+.env.local
+.env.development
+.env.test
+.env.example
 venv/
+env/
+ENV/
+.venv/
 
 # Django stuff:
 *.log
@@ -14,10 +21,45 @@ venv/
 __pycache__/
 local_settings.py
 /staticfiles/
+
+# Node.js/React stuff:
 node_modules/
 frontend/node_modules/
-# VSCode settings
+build/
+dist/
+.cache/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# CDK stuff:
+cdk.out/
+infrastructure/cdk.out/
+
+# LocalStack data:
+localstack_data/
+
+# Testing:
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+
+# IDE and editors:
 .vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS generated files:
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
 
 # Ignnore migration files
 */migrations/

@@ -2,5 +2,8 @@
   "app": "python app.py",
   "context": {
     "@aws-cdk/core:newStyleStackSynthesis": false
+  },
+  "hooks": {
+    "postDeploy": "python update-env.py"
   }
 }

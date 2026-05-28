@@ -19,7 +19,7 @@ class DynamoStack(Stack):
             removal_policy=RemovalPolicy.DESTROY,  # Solo para dev/local
         )
 
-        # GSI1 — igual al que tienes en create_table.py
+        # GSI1
         self.table.add_global_secondary_index(
             index_name="GSI1",
             partition_key=dynamodb.Attribute(

@@ -1,6 +1,6 @@
-# MI MERCADO GLOBAL — Panel de Control NoSQL
+# EcoCart — E-Commerce NoSQL
 
-Sistema de visualización y gestión de datos desarrollado para la cátedra de **Bases de Datos No Relacionales**. El proyecto implementa una arquitectura de alto rendimiento basada en **DynamoDB** y el patrón de **Single Table Design** para optimizar el acceso a la información de un ecosistema de E-commerce.
+Sistema de e-commerce desarrollado para la cátedra de **Bases de Datos No Relacionales**. Implementa una arquitectura de alto rendimiento basada en **DynamoDB** con **Single Table Design**, cache-aside con **Redis**, y un frontend moderno desacoplado.
 
 ## Integrantes - Grupo 2
 * Daniel Eduardo Bocachica Castillo
@@ -14,70 +14,83 @@ Sistema de visualización y gestión de datos desarrollado para la cátedra de *
 
 ---
 
-## Propósito del Proyecto
+## Stack Tecnológico
 
-El objetivo principal es implementar y visualizar los conceptos avanzados de modelado NoSQL aprendidos en clase. A través de una interfaz moderna, el sistema permite gestionar perfiles de usuario, historiales de pedidos y desgloses de productos, garantizando que cada consulta se resuelva de manera eficiente sin realizar "joins" costosos, siguiendo la filosofía de DynamoDB.
+| Capa | Tecnología |
+|------|-----------|
+| Base de Datos | Amazon DynamoDB (Local) |
+| Cache | Redis 7 |
+| Backend | Python 3.12 + Django 5 + DRF |
+| Frontend | React 19 + TypeScript + Vite 8 + Tailwind CSS v4 |
+| Infraestructura | Docker Compose, LocalStack (Lambda + API Gateway), AWS CDK |
 
 ---
 
-## Stack Tecnológico
+## Ejecución
 
-* **Base de Datos:** Amazon DynamoDB (Local)
-* **Backend:** Python con Django Framework
-* **Frontend:** React.js con diseño de interfaz de usuario (UI) personalizada
-* **Infraestructura:** Docker y Docker Compose para orquestación de servicios
+Un solo comando levanta todo el sistema:
+
+```bash
+docker compose up --build
+```
+
+| Servicio | Puerto | URL |
+|----------|--------|-----|
+| Frontend | 5173 | http://localhost:5173 |
+| Backend API | 8000 | http://localhost:8000/api/ |
+| DynamoDB Local | 3000 | — |
+| Redis | 6379 | — |
+| LocalStack | 4566 | — |
+
+El backend automáticamente crea la tabla DynamoDB y carga datos de prueba al iniciar.
+
+---
+
+## Estructura del Proyecto
+
+```
+├── backend/                 # Django REST API
+│   ├── core/                # Settings, URLs, WSGI
+│   ├── ecommerce/           # App principal (views, services, aws_client)
+│   ├── create_table.py      # Crea tabla DynamoDB al iniciar
+│   ├── seed-data.py         # Datos de prueba (productos, usuarios, órdenes)
+│   └── Dockerfile
+├── frontend/                # React + TypeScript (Vite)
+│   ├── src/
+│   │   ├── contexts/        # Estado global (Auth, Cart)
+│   │   ├── features/        # Módulos por dominio (products, cart, auth)
+│   │   ├── hooks/           # Custom hooks
+│   │   ├── layouts/         # Layout components
+│   │   ├── services/        # Capa de datos (API calls)
+│   │   └── shared/          # Types, constants, componentes reutilizables
+│   └── Dockerfile
+├── infrastructure/          # AWS CDK stacks
+├── lambdas/                 # Lambda handlers (LocalStack)
+└── docker-compose.yml       # Orquestación completa
+```
 
 ---
 
 ## Modelado de Datos (Single Table Design)
 
-El diseño se basa en **Patrones de Acceso** predefinidos que dictan la estructura de las llaves primarias compuestas (PK y SK).
+| Entidad | PK | SK | Propósito |
+|---------|----|----|-----------|
+| Usuario | `USER#<id>` | `PROFILE` | Perfil (nombre, email, dirección) |
+| Orden | `USER#<id>` | `ORDER#<id>` | Cabecera del pedido |
+| Ítem | `ORDER#<id>` | `ITEM#<prod>` | Producto dentro de una orden |
+| Producto | `CATALOG#main` | `PRODUCT#<id>` | Catálogo de productos |
 
-### Patrones de Acceso Implementados:
-
-1. **Perfil de Usuario:** `PK=USER#<id>`, `SK=PROFILE` (Lectura directa O(1)).
-2. **Órdenes de un Usuario:** `PK=USER#<id>`, `SK comienza con ORDER#` (Query ordenado cronológicamente).
-3. **Ítems de una Orden:** `PK=ORDER#<id>`, `SK comienza con ITEM#` (Recupera todos los productos de un pedido).
-4. **Buscar Orden sin Usuario:** Implementado mediante el índice global **GSI1** (`GSI1PK=ORDER#<id>`).
-5. **Productos por Categoría:** `PK=PROD#<id>`, `SK=CAT#<categoria>`.
-
-### Estructura de Llaves Jerárquicas:
-
-| Entidad | Partition Key (PK) | Sort Key (SK) | Propósito |
-| :--- | :--- | :--- | :--- |
-| **Usuario** | `USER#<username>` | `PROFILE` | Datos básicos del perfil. |
-| **Orden** | `USER#<username>` | `ORDER#<timestamp>#<id>` | Cabecera del pedido (orden nativo). |
-| **Producto** | `ORDER#<id>` | `ITEM#<id_prod>` | Detalle de ítem dentro de la orden. |
+**GSI1:** `gsi1pk=ORDER#<id>`, `gsi1sk=METADATA` — Buscar orden sin conocer el usuario.
 
 ---
 
-## Instalación y Ejecución
+## API Endpoints
 
-Sigue estos pasos para levantar el entorno completo en **GitHub Codespaces** o localmente:
-
-### 1. Preparar el Entorno
-
-Asegúrate de que el script de inicialización tenga permisos de ejecución:
-
-```bash
-chmod +x backend/entrypoint.sh
 ```
-
-### 2. Levantar Servicios con Docker
-
-Construye y levanta los contenedores para el Backend, Frontend y DynamoDB Local:
-
-```bash
-docker-compose up --build
+GET /api/products/                    → Catálogo de productos (?category=)
+GET /api/users/                       → Todos los usuarios
+GET /api/user/<id>/profile/           → Perfil de usuario
+GET /api/user/<id>/orders/            → Órdenes de un usuario
+GET /api/orders/search/<order_id>/    → Buscar orden por ID (GSI1)
+GET /api/orders/<order_id>/items/     → Ítems de una orden
 ```
-
-### 3. Iniciar el Frontend
-
-Navega a la carpeta del frontend y arranca el servidor de desarrollo:
-
-```bash
-cd frontend
-npm install
-npm start
-```
-
