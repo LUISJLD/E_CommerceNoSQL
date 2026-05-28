@@ -64,8 +64,9 @@ def _handle_get(table, user_id):
         ]
 
     result = cache_aside(cache_key, _fetch, CART_TTL)
-    data = result.get("data", []) if isinstance(result, dict) else result
-    return response(200, data)
+    if not isinstance(result, dict) or "data" not in result:
+        result = {"source": "DATABASE", "data": result}
+    return response(200, result)
 
 
 def _handle_post(table, user_id, event):

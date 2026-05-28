@@ -1,36 +1,82 @@
-import { createContext, useContext, useState } from "react";
-import type { ReactNode } from "react";
-import type { User } from "../shared/types";
+import React, { createContext, useContext, useState, useEffect } from 'react';
+import { jwtDecode } from 'jwt-decode';
 
-interface AuthContextValue {
-  user: User | null;
-  isAuthenticated: boolean;
-  logout: () => void;
+interface User {
+  email: string;
+  name: string;
+  role: 'admin' | 'user';
 }
 
-const AuthContext = createContext<AuthContextValue | null>(null);
+interface AuthContextType {
+  user: User | null;
+  token: string | null;
+  login: (token: string, userData: User) => void;
+  logout: () => void;
+  isAuthenticated: boolean;
+  isAdmin: boolean;
+}
 
-const MOCK_USER: User = {
-  username: "jgarcia",
-  address: "Calle 100 # 12 - 34, Apto 501, Bogotá, Colombia",
-};
+const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<User | null>(MOCK_USER);
+export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const [user, setUser] = useState<User | null>(null);
+  const [token, setToken] = useState<string | null>(null);
 
-  const value: AuthContextValue = {
-    user,
-    isAuthenticated: !!user,
-    logout: () => setUser(null),
+  useEffect(() => {
+    // Restaurar sesión desde localStorage al cargar
+    const storedToken = localStorage.getItem('ecommerce_token');
+    if (storedToken) {
+      try {
+        const decoded: any = jwtDecode(storedToken);
+        // Validar expiración
+        if (decoded.exp * 1000 < Date.now()) {
+          logout();
+        } else {
+          setToken(storedToken);
+          setUser({
+            email: decoded.email,
+            name: decoded.name,
+            role: decoded.role,
+          });
+        }
+      } catch (err) {
+        logout();
+      }
+    }
+  }, []);
+
+  const login = (newToken: string, userData: User) => {
+    localStorage.setItem('ecommerce_token', newToken);
+    setToken(newToken);
+    setUser(userData);
   };
 
-  return <AuthContext value={value}>{children}</AuthContext>;
-}
+  const logout = () => {
+    localStorage.removeItem('ecommerce_token');
+    setToken(null);
+    setUser(null);
+  };
 
-export function useAuth(): AuthContextValue {
+  return (
+    <AuthContext.Provider
+      value={{
+        user,
+        token,
+        login,
+        logout,
+        isAuthenticated: !!user,
+        isAdmin: user?.role === 'admin',
+      }}
+    >
+      {children}
+    </AuthContext.Provider>
+  );
+};
+
+export const useAuth = () => {
   const context = useContext(AuthContext);
-  if (!context) {
-    throw new Error("useAuth must be used within AuthProvider");
+  if (context === undefined) {
+    throw new Error('useAuth debe usarse dentro de un AuthProvider');
   }
   return context;
-}
+};
