@@ -8,9 +8,15 @@ export default defineConfig({
     react(),
   ],
   server: {
+    host: '0.0.0.0',
     proxy: {
+      '/localstack': {
+        target: 'http://localstack:4566',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/localstack/, ''),
+      },
       '/api': {
-        target: 'http://127.0.0.1:4566/restapis',
+        target: 'http://localstack:4566/restapis',
         changeOrigin: true,
         rewrite: (path) => {
           const apiId = process.env.VITE_API_ID || 'ecommerce123'
