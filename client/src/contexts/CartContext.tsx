@@ -115,7 +115,12 @@ export function CartProvider({
   const refreshCart = useCallback(async () => {
     try {
       const start = performance.now();
-      const response = await fetch(`${API_URL}/cart/${userId}`);
+      const token = localStorage.getItem('ecommerce_token');
+      const response = await fetch(`${API_URL}/cart/${userId}`, {
+        headers: {
+          ...(token && { Authorization: `Bearer ${token}` }),
+        },
+      });
 
       if (!response.ok) {
         console.error("[Cart] GET error:", response.status, response.statusText);
@@ -164,10 +169,15 @@ export function CartProvider({
   const addItem = useCallback(async (product: Product) => {
     try {
       console.log("[Cart] POST", product.id, "→", userId);
+      const token = localStorage.getItem('ecommerce_token');
       const response = await fetch(`${API_URL}/cart/${userId}`, {
-  method: "POST",
-  body: JSON.stringify({ productId: product.id, qty: 1, price: product.price }),
-});
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(token && { Authorization: `Bearer ${token}` }),
+        },
+        body: JSON.stringify({ productId: product.id, qty: 1, price: product.price }),
+      });
 
       if (!response.ok) {
         console.error("[Cart] POST error:", response.status, response.statusText);
@@ -182,9 +192,15 @@ export function CartProvider({
 
   const removeItem = useCallback(async (productId: string) => {
     try {
+      const token = localStorage.getItem('ecommerce_token');
       const response = await fetch(
         `${API_URL}/cart/${userId}?productId=${productId}`,
-        { method: "DELETE" }
+        {
+          method: "DELETE",
+          headers: {
+            ...(token && { Authorization: `Bearer ${token}` }),
+          },
+        }
       );
 
       if (!response.ok) {

@@ -3,6 +3,7 @@ const API_URL =
   import.meta.env.VITE_API_URL || "/api";
 
 export interface Order {
+  pk?: string;
   orderId: string;
   status: string;
   total: number;
@@ -28,10 +29,12 @@ export interface OrdersResult {
  * Crea una nueva orden a partir del carrito guardado en Redis.
  */
 export async function createOrder(userId: string): Promise<{ orderId: string, total: number }> {
+  const token = localStorage.getItem('ecommerce_token');
   const res = await fetch(`${API_URL}/orders`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
+      ...(token && { Authorization: `Bearer ${token}` }),
     },
     body: JSON.stringify({ userId }),
   });
@@ -49,7 +52,12 @@ export async function createOrder(userId: string): Promise<{ orderId: string, to
  */
 export async function fetchUserOrders(userId: string): Promise<OrdersResult> {
   const start = performance.now();
-  const res = await fetch(`${API_URL}/user/${userId}/orders`);
+  const token = localStorage.getItem('ecommerce_token');
+  const res = await fetch(`${API_URL}/user/${userId}/orders`, {
+    headers: {
+      ...(token && { Authorization: `Bearer ${token}` }),
+    },
+  });
   const elapsed = Math.round(performance.now() - start);
   if (!res.ok) throw new Error(`Error ${res.status} fetching orders`);
 
@@ -78,7 +86,12 @@ export async function fetchUserOrders(userId: string): Promise<OrdersResult> {
  * La Lambda retorna un array directo.
  */
 export async function fetchOrderItems(orderId: string): Promise<OrderItem[]> {
-  const res = await fetch(`${API_URL}/orders/${orderId}/items`);
+  const token = localStorage.getItem('ecommerce_token');
+  const res = await fetch(`${API_URL}/orders/${orderId}/items`, {
+    headers: {
+      ...(token && { Authorization: `Bearer ${token}` }),
+    },
+  });
   if (!res.ok) throw new Error(`Error ${res.status} fetching order items`);
 
   const json = await res.json();
