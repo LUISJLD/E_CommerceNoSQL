@@ -13,7 +13,6 @@ export default defineConfig({
         target: 'http://127.0.0.1:4566/restapis',
         changeOrigin: true,
         rewrite: (path) => {
-          // Usamos el ID estático 'ecommerce123' que configuramos en lambda_stack.py
           const apiId = process.env.VITE_API_ID || 'ecommerce123'
           return path.replace(/^\/api/, `/${apiId}/prod/_user_request_`)
         },

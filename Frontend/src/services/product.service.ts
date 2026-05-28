@@ -28,6 +28,29 @@ export async function fetchProducts(category?: string): Promise<Product[]> {
   }));
 }
 
+export async function createProduct(data: {
+  name: string;
+  price: number;
+  stock: number;
+  category: string;
+  image: string;
+}): Promise<{ productId: string }> {
+  const res = await fetch(`${API_URL}/products`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) throw new Error(`Error ${res.status} creating product`);
+  return res.json();
+}
+
+export async function deleteProduct(productId: string): Promise<void> {
+  const res = await fetch(`${API_URL}/products/${productId}`, {
+    method: "DELETE",
+  });
+  if (!res.ok) throw new Error(`Error ${res.status} deleting product`);
+}
+
 export function filterProducts(
   products: Product[],
   query: string,

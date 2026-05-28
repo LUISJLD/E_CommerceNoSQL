@@ -122,15 +122,17 @@ export function CartProvider({
         return;
       }
 
-      const result = await response.json();
+      const source = response.headers.get("X-Cache-Source");
+      setCacheSource(source === "CACHE" ? "CACHE" : source === "DATABASE" ? "DATABASE" : "UNKNOWN");
       const elapsed = Math.round(performance.now() - start);
+      setResponseTime(elapsed);
 
-      // Extraer datos dependiendo si el backend devuelve un dict con source y data, o directo el array
+      const result = await response.json();
+
       const backendSource = result.source || "UNKNOWN";
       const backendData = Array.isArray(result.data) ? result.data : (Array.isArray(result) ? result : []);
 
       setCacheSource(backendSource);
-      setResponseTime(elapsed);
 
       const backendItems: Array<{ productId: string; qty: number; price: number }> = backendData;
 
@@ -198,7 +200,7 @@ export function CartProvider({
 
   const clear = useCallback(() => dispatch({ type: "CLEAR" }), []);
 
-  const checkout = useCallback(async (): Promise<boolean> => {
+  const checkout = useCallback(async (_address: string): Promise<boolean> => {
     try {
       // Importación dinámica para evitar problemas de ciclo o usar el servicio de forma limpia
       const { createOrder } = await import("../services/orders.service");

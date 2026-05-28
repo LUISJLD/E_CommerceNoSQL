@@ -4,10 +4,6 @@ get_user_orders
 GET /user/{user_id}/orders  →  historial de órdenes de un usuario.
 
 Consulta los ítems pk=USER#<id>, sk=ORDER#*.
-
-NOTA: la versión anterior incluía lógica de carrito (_fetch_cart) que NUNCA
-se ejecutaba — el API enruta /cart a la Lambda manage_cart, no a esta.
-Ese código muerto se eliminó. El carrito vive solo en manage_cart/handler.py.
 """
 import os
 import logging

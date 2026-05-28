@@ -27,7 +27,7 @@ function PrivateRoute({ children, requireAdmin = false }: { children: JSX.Elemen
 }
 
 function ShopApp() {
-  const { products, allProducts, loading, query, setQuery, category, setCategory } = useProducts();
+  const { products, allProducts, loading, query, setQuery, category, setCategory, cacheSource, responseTime } = useProducts();
   const { user } = useAuth();
 
   return (
@@ -39,7 +39,7 @@ function ShopApp() {
         onNavigate={() => {}}
       >
         <CategoryFilter selected={category} onSelect={setCategory} />
-        <ProductGrid products={products} loading={loading} />
+        <ProductGrid products={products} loading={loading} cacheSource={cacheSource} responseTime={responseTime} />
       </MainLayout>
     </CartProvider>
   );
@@ -69,13 +69,13 @@ export default function App() {
       <Router>
         <Routes>
           <Route path="/login" element={<Login />} />
-          
+
           <Route path="/" element={
             <PrivateRoute>
               <ShopApp />
             </PrivateRoute>
           } />
-          
+
           <Route path="/orders" element={
             <PrivateRoute>
               <OrdersApp />

@@ -5,16 +5,6 @@ GET /products                    →  catálogo completo.
 GET /products?category=<cat>     →  catálogo filtrado por categoría.
 
 Consulta los ítems pk=CATALOG#main, sk=PRODUCT#*.
-
-Sobre el filtrado por categoría:
-El catálogo completo se trae siempre con un query y se filtra en memoria.
-Cada categoría cachea su propia copia bajo la clave products:cat:<cat>,
-así que tras el primer hit las siguientes peticiones de esa categoría
-salen de Redis sin tocar DynamoDB.
-
-En AWS real, con un catálogo grande, lo correcto sería un GSI con
-gsi1pk=CATEGORY#<cat> para no escanear todo. Para LocalStack y un dataset
-de demo, el filtro en memoria es suficiente y más simple.
 """
 import os
 import logging
@@ -44,7 +34,6 @@ def lambda_handler(event, context):
     try:
         query_params = event.get("queryStringParameters") or {}
         category = query_params.get("category")
-        # Normaliza: ?category= vacío se trata como sin filtro
         if category is not None:
             category = category.strip() or None
 

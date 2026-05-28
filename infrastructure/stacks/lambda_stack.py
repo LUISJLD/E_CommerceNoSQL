@@ -5,6 +5,7 @@ from aws_cdk import aws_dynamodb as dynamodb
 from aws_cdk import aws_s3 as s3
 from constructs import Construct
 
+
 class LambdaStack(Stack):
     def __init__(self, scope: Construct, id: str,
                  dynamo_table: dynamodb.Table,
@@ -33,7 +34,7 @@ class LambdaStack(Stack):
             "CACHE_TTL_SECONDS": "60",
             "CART_TTL_SECONDS": "300",
             "APP_REGION": "us-east-1",
-            "JWT_SECRET": "mi_super_secreto_local_123", # Para uso local
+            "JWT_SECRET": "mi_super_secreto_local_123",
             "IMAGES_BUCKET_NAME": product_images_bucket.bucket_name,
         }
 
@@ -54,12 +55,12 @@ class LambdaStack(Stack):
                 self, name,
                 runtime=_lambda.Runtime.PYTHON_3_12,
                 handler=f"{handler_dir}.handler.lambda_handler",
-                function_name=f"EcommerceLambda-{name}", 
+                function_name=f"EcommerceLambda-{name}",
                 code=common_code,
                 environment=shared_env,
                 timeout=Duration.seconds(10),
             )
-            dynamo_table.grant_read_write_data(fn) # Otorgamos r/w por simplicidad local
+            dynamo_table.grant_read_write_data(fn)
             return fn
 
         # Instanciación de las Lambdas
@@ -69,7 +70,7 @@ class LambdaStack(Stack):
         fn_products    = make_lambda("GetAllProducts", "get_products")
         fn_cart        = make_lambda("ManageUserCart", "manage_cart")
         fn_create_order = make_lambda("CreateOrder",   "create_order")
-        
+
         # Lambdas de Admin
         fn_admin_products = make_lambda("AdminProducts", "manage_products")
         fn_admin_orders   = make_lambda("AdminOrders",   "manage_orders")
@@ -87,7 +88,7 @@ class LambdaStack(Stack):
                 allow_headers=["Content-Type", "Authorization"]
             )
         )
-        
+
         from aws_cdk import Tags
         Tags.of(api).add("_custom_id_", "ecommerce123")
 
@@ -105,7 +106,7 @@ class LambdaStack(Stack):
         admin_product = admin_products.add_resource("{id}")
         admin_product.add_method("PUT", apigw.LambdaIntegration(fn_admin_products))
         admin_product.add_method("DELETE", apigw.LambdaIntegration(fn_admin_products))
-        
+
         admin_orders = admin.add_resource("orders")
         admin_orders.add_method("GET", apigw.LambdaIntegration(fn_admin_orders))
         admin_order = admin_orders.add_resource("{id}")

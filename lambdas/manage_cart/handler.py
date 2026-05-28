@@ -60,12 +60,10 @@ def _handle_post(table, user_id, event):
 
     try:
         qty_dec = int(qty)
-        # str() intermedio evita problemas de precisión de float -> Decimal
         price_dec = Decimal(str(price))
     except (ValueError, TypeError):
         return response(400, {"error": "qty debe ser entero y price numérico"})
 
-    # if_not_exists permite crear la fila la primera vez e incrementar después
     table.update_item(
         Key={"pk": f"USER#{user_id}", "sk": f"CART#{product_id}"},
         UpdateExpression="SET qty = if_not_exists(qty, :zero) + :inc, price = :price",
@@ -83,7 +81,6 @@ def _handle_post(table, user_id, event):
 def _handle_delete(table, user_id, event):
     query_params = event.get("queryStringParameters") or {}
     product_id = query_params.get("productId")
-    # Soporta también product_id como path parameter si el API lo enruta así
     if not product_id:
         product_id = (event.get("pathParameters") or {}).get("product_id")
     if not product_id:

@@ -146,11 +146,17 @@ export default function OrdersView({ userId }: { userId: string }) {
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [cacheSource, setCacheSource] = useState<"CACHE" | "DATABASE" | "UNKNOWN">("UNKNOWN");
+  const [responseTime, setResponseTime] = useState(0);
 
   useEffect(() => {
     setLoading(true);
     fetchUserOrders(userId)
-      .then(setOrders)
+      .then(({ orders, cacheSource, responseTime }) => {
+        setOrders(orders);
+        setCacheSource(cacheSource);
+        setResponseTime(responseTime);
+      })
       .catch((e) => setError(e.message))
       .finally(() => setLoading(false));
   }, [userId]);
@@ -186,6 +192,20 @@ export default function OrdersView({ userId }: { userId: string }) {
           <p className="text-xs text-gray-400 mt-0.5">
             {orders.length} {orders.length === 1 ? "pedido" : "pedidos"} encontrados
           </p>
+        </div>
+        <div className="flex items-center gap-2">
+          {cacheSource !== "UNKNOWN" && (
+            <span className={`text-xs font-medium px-2 py-0.5 rounded-full border ${
+              cacheSource === "CACHE"
+                ? "bg-green-100 text-green-800 border-green-300"
+                : "bg-yellow-100 text-yellow-800 border-yellow-300"
+            }`}>
+              {cacheSource === "CACHE" ? "⚡ Redis Cache" : "🗄️ DynamoDB"}
+            </span>
+          )}
+          {responseTime > 0 && (
+            <span className="text-xs text-gray-400">{responseTime} ms</span>
+          )}
         </div>
       </div>
 

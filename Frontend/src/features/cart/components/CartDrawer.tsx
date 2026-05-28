@@ -11,7 +11,6 @@ export default function CartDrawer({ onClose }: CartDrawerProps) {
   const [checkoutSuccess, setCheckoutSuccess] = useState(false);
   const [address, setAddress] = useState("");
 
-  // Cerrar con Escape
   useEffect(() => {
     const handleKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") onClose();
@@ -44,7 +43,6 @@ export default function CartDrawer({ onClose }: CartDrawerProps) {
     }
   };
 
-  // Colores del badge según la fuente de datos
   const sourceBadgeClass =
     cacheSource === "CACHE"
       ? "bg-emerald-500/10 text-emerald-600 border border-emerald-500/20"
@@ -61,16 +59,13 @@ export default function CartDrawer({ onClose }: CartDrawerProps) {
 
   return (
     <div className="fixed inset-0 z-50 flex justify-end">
-      {/* Overlay con blur y animación suave */}
-      <div 
+      <div
         className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm transition-opacity duration-300"
         onClick={onClose}
       />
-      
-      {/* Panel principal */}
+
       <div className="relative w-full max-w-md h-full bg-slate-50 shadow-2xl flex flex-col transform transition-transform duration-300 translate-x-0">
-        
-        {/* Header estético */}
+
         <div className="flex justify-between items-center px-6 py-4 border-b border-slate-200 bg-white/80 backdrop-blur-md">
           <h2 className="text-lg font-bold bg-gradient-to-r from-indigo-800 to-indigo-500 bg-clip-text text-transparent">
             Tu Carrito
@@ -86,7 +81,6 @@ export default function CartDrawer({ onClose }: CartDrawerProps) {
           </button>
         </div>
 
-        {/* Metadatos (Badge) */}
         <div className="px-6 py-3 bg-white flex items-center justify-between border-b border-slate-100 shadow-sm z-10">
           <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${sourceBadgeClass}`}>
             {sourceLabel}
@@ -98,7 +92,6 @@ export default function CartDrawer({ onClose }: CartDrawerProps) {
           )}
         </div>
 
-        {/* Lista de productos */}
         <div className="flex-1 overflow-y-auto p-6 space-y-4">
           {checkoutSuccess ? (
             <div className="h-full flex flex-col items-center justify-center text-center animate-fade-in">
@@ -151,7 +144,6 @@ export default function CartDrawer({ onClose }: CartDrawerProps) {
           )}
         </div>
 
-        {/* Footer / Total */}
         {items.length > 0 && !checkoutSuccess && (
           <div className="border-t border-slate-200 bg-white p-6 shadow-[0_-15px_40px_-15px_rgba(0,0,0,0.08)] relative z-10">
             <div className="flex justify-between items-end mb-6">
@@ -160,7 +152,7 @@ export default function CartDrawer({ onClose }: CartDrawerProps) {
                 <p className="text-xl font-bold text-slate-800">${totalPrice.toLocaleString()}</p>
               </div>
             </div>
-            
+
             <div className="mb-4">
               <label htmlFor="address" className="block text-xs font-semibold text-slate-600 mb-1">
                 Dirección de Envío
@@ -174,13 +166,13 @@ export default function CartDrawer({ onClose }: CartDrawerProps) {
                 className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all"
               />
             </div>
-            
+
             <button
               onClick={handleCheckout}
               disabled={isCheckingOut}
               className={`w-full py-3 rounded-xl font-bold text-white shadow-lg shadow-indigo-500/20 transition-all flex items-center justify-center gap-2 text-base
-                ${isCheckingOut 
-                  ? "bg-indigo-400 cursor-wait" 
+                ${isCheckingOut
+                  ? "bg-indigo-400 cursor-wait"
                   : "bg-indigo-600 hover:bg-indigo-700 hover:shadow-indigo-500/40 hover:-translate-y-0.5 active:translate-y-0"
                 }`}
             >

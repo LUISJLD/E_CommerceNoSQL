@@ -6,14 +6,34 @@ import ProductCard from "./ProductCard";
 interface ProductGridProps {
   products: Product[];
   loading: boolean;
+  cacheSource?: "CACHE" | "DATABASE" | "UNKNOWN";
+  responseTime?: number;
 }
 
-export default function ProductGrid({ products, loading }: ProductGridProps) {
+export default function ProductGrid({
+  products,
+  loading,
+  cacheSource = "UNKNOWN",
+  responseTime = 0,
+}: ProductGridProps) {
   const { addItem, items } = useCart();
   const { isAdmin } = useAuth();
 
-  // Set de IDs que ya están en el carrito para feedback visual inmediato
   const cartProductIds = new Set(items.map((i) => i.product.id));
+
+  const badgeClass =
+    cacheSource === "CACHE"
+      ? "bg-green-100 text-green-800 border border-green-300"
+      : cacheSource === "DATABASE"
+      ? "bg-yellow-100 text-yellow-800 border border-yellow-300"
+      : "bg-gray-100 text-gray-400 border border-gray-200";
+
+  const badgeLabel =
+    cacheSource === "CACHE"
+      ? "⚡ Redis Cache"
+      : cacheSource === "DATABASE"
+      ? "🗄️ DynamoDB"
+      : null;
 
   if (loading) {
     return (
@@ -28,7 +48,18 @@ export default function ProductGrid({ products, loading }: ProductGridProps) {
 
   return (
     <section className="flex-1">
-      <h2 className="text-lg font-bold text-gray-900 mb-4">Nuestros Productos</h2>
+      <div className="flex items-center gap-3 mb-4">
+        <h2 className="text-lg font-bold text-gray-900">Nuestros Productos</h2>
+        {badgeLabel && (
+          <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${badgeClass}`}>
+            {badgeLabel}
+          </span>
+        )}
+        {responseTime > 0 && (
+          <span className="text-xs text-gray-400">{responseTime} ms</span>
+        )}
+      </div>
+
       <div className="grid grid-cols-4 gap-4">
         {products.map((product) => (
           <ProductCard

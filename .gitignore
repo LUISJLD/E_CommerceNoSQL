@@ -39,6 +39,18 @@ infrastructure/cdk.out/
 # LocalStack data:
 localstack_data/
 
+# Lambda hot-reload: shared/ copies, pip deps, and markers
+lambdas/*/shared/
+lambdas/*/_deps_installed
+lambdas/*/redis/
+lambdas/*/redis-*.dist-info/
+lambdas/*/bin/
+lambdas/*/async_timeout*
+lambdas/shared/_deps_installed
+lambdas/shared/redis/
+lambdas/shared/redis-*.dist-info/
+lambdas/shared/bin/
+
 # Testing:
 .pytest_cache/
 .coverage
@@ -61,7 +73,8 @@ htmlcov/
 ehthumbs.db
 Thumbs.db
 
-# Ignore migration files
+# Ignnore migration files
 */migrations/
 
 cdk.out/
+package-lock.json
