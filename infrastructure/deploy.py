@@ -132,26 +132,48 @@ def _detect_host_lambdas_path() -> str:
     return "/app/lambdas"
 
 def _install_shared_deps() -> None:
-    """Instala dependencias (redis, PyJWT) una sola vez en lambdas/shared/.
-    Al copiar shared/ a cada handler, las deps van incluidas automáticamente."""
-    marker = SHARED / "_deps_installed"
+    """Instala redis y PyJWT una sola vez en un directorio temporal de deps."""
+    marker = LAMBDAS / "_deps_installed"
     if marker.exists():
         return
+    deps_dir = LAMBDAS / "_deps"
     subprocess.run(
         [sys.executable, "-m", "pip", "install", "redis", "PyJWT",
-         "-t", str(SHARED), "-q"],
+         "-t", str(deps_dir), "-q"],
         check=True,
     )
     marker.write_text("ok")
-    print("  ⚙  Dependencias instaladas en shared/")
+    print("  ⚙  Dependencias instaladas en lambdas/_deps/")
 
 def _prepare_lambda_dir(handler_dir: str) -> None:
-    """Copia shared/ (con deps incluidas) dentro del directorio del handler."""
-    src = LAMBDAS / handler_dir
-    shared_dst = src / "shared"
+    """Prepara el directorio de cada lambda:
+    - Copia shared/ (módulos Python propios)
+    - Copia deps (redis, jwt) a la raíz donde Python las puede importar
+    """
+    handler_path = LAMBDAS / handler_dir
+    deps_dir = LAMBDAS / "_deps"
+
+    # 1. Módulos propios: shared/
+    shared_dst = handler_path / "shared"
     if shared_dst.exists():
         shutil.rmtree(shared_dst)
-    shutil.copytree(SHARED, shared_dst, dirs_exist_ok=True)
+    shutil.copytree(SHARED, shared_dst,
+                    ignore=shutil.ignore_patterns("__pycache__", "*.pyc"),
+                    dirs_exist_ok=True)
+
+    # 2. Paquetes pip: copiar a la raíz del handler
+    if deps_dir.exists():
+        for item in deps_dir.iterdir():
+            dst = handler_path / item.name
+            if dst.exists():
+                if dst.is_dir():
+                    shutil.rmtree(dst)
+                else:
+                    dst.unlink()
+            if item.is_dir():
+                shutil.copytree(item, dst)
+            else:
+                shutil.copy2(item, dst)
 
 def create_lambdas(role_arn: str) -> dict[str, str]:
     lam = boto("lambda")
