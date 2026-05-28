@@ -44,6 +44,8 @@ lambdas/*/shared/
 lambdas/*/_deps_installed
 lambdas/*/redis/
 lambdas/*/redis-*.dist-info/
+lambdas/*/jwt/
+lambdas/*/pyjwt-*.dist-info/
 lambdas/*/bin/
 lambdas/*/async_timeout*
 lambdas/shared/_deps_installed

@@ -166,15 +166,21 @@ def create_lambdas(role_arn: str) -> dict[str, str]:
         "EcommerceLambda-GetAllProducts": "get_products",
         "EcommerceLambda-ManageUserCart": "manage_cart",
         "EcommerceLambda-ManageProducts": "manage_products",
+        "EcommerceLambda-Auth":           "auth",
+        "EcommerceLambda-CreateOrder":    "create_order",
+        "EcommerceLambda-ManageOrders":   "manage_orders",
     }
 
-    # Instalar dependencias (redis) en cada handler para hot-reload
+    # Instalar dependencias en cada handler para hot-reload
     for handler_dir in handlers.values():
         handler_path = LAMBDAS / handler_dir
         marker = handler_path / "_deps_installed"
         if not marker.exists():
+            deps = ["redis"]
+            if handler_dir == "auth":
+                deps.append("PyJWT")
             subprocess.run(
-                [sys.executable, "-m", "pip", "install", "redis",
+                [sys.executable, "-m", "pip", "install", *deps,
                  "-t", str(handler_path), "-q"],
                 check=True,
             )
@@ -336,14 +342,43 @@ def create_api_gateway(arns: dict[str, str]) -> str:
     M(profile,    "GET", "EcommerceLambda-GetUserProfile")
     M(orders_res, "GET", "EcommerceLambda-GetUserOrders")
 
-    # /orders/{order_id}  /orders/{order_id}/items
+    # /orders  /orders/{order_id}  /orders/{order_id}/items
     orders     = R("orders")
     order_id   = R("{order_id}", orders)
     items_res  = R("items", order_id)
+    _add_options(apigw, api_id, orders)
     _add_options(apigw, api_id, order_id)
     _add_options(apigw, api_id, items_res)
-    M(order_id,  "GET", "EcommerceLambda-GetOrderById")
-    M(items_res, "GET", "EcommerceLambda-GetOrderItems")
+    M(orders,    "POST", "EcommerceLambda-CreateOrder")
+    M(order_id,  "GET",  "EcommerceLambda-GetOrderById")
+    M(items_res, "GET",  "EcommerceLambda-GetOrderItems")
+
+    # /auth/login  /auth/register
+    auth       = R("auth")
+    auth_login = R("login", auth)
+    auth_reg   = R("register", auth)
+    _add_options(apigw, api_id, auth_login)
+    _add_options(apigw, api_id, auth_reg)
+    M(auth_login, "POST", "EcommerceLambda-Auth")
+    M(auth_reg,   "POST", "EcommerceLambda-Auth")
+
+    # /admin/products  /admin/products/{product_id}  /admin/orders  /admin/orders/{order_id}/status
+    admin          = R("admin")
+    admin_products = R("products", admin)
+    admin_prod_id  = R("{product_id}", admin_products)
+    admin_orders   = R("orders", admin)
+    admin_ord_id   = R("{order_id}", admin_orders)
+    admin_status   = R("status", admin_ord_id)
+    _add_options(apigw, api_id, admin_products)
+    _add_options(apigw, api_id, admin_prod_id)
+    _add_options(apigw, api_id, admin_orders)
+    _add_options(apigw, api_id, admin_status)
+    M(admin_products, "GET",    "EcommerceLambda-ManageProducts")
+    M(admin_products, "POST",   "EcommerceLambda-ManageProducts")
+    M(admin_prod_id,  "PUT",    "EcommerceLambda-ManageProducts")
+    M(admin_prod_id,  "DELETE", "EcommerceLambda-ManageProducts")
+    M(admin_orders,   "GET",    "EcommerceLambda-ManageOrders")
+    M(admin_status,   "PUT",    "EcommerceLambda-ManageOrders")
 
     # Deploy al stage "prod"
     apigw.create_deployment(restApiId=api_id, stageName="prod")
