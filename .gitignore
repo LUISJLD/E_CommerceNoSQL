@@ -61,5 +61,7 @@ htmlcov/
 ehthumbs.db
 Thumbs.db
 
-# Ignore migration files
+# Ignnore migration files
 */migrations/
+
+cdk.out/
