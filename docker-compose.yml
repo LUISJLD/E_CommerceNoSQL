@@ -20,7 +20,6 @@ services:
       - DEFAULT_REGION=us-east-1
       - AWS_DEFAULT_REGION=us-east-1
       - LAMBDA_DOCKER_NETWORK=e_commercenosql_default
-      - LAMBDA_DOCKER_FLAGS=--label com.docker.compose.project=e_commercenosql --label com.docker.compose.service=lambda
       - LAMBDA_RUNTIME_ENVIRONMENT_TIMEOUT=60
       - DEBUG=0
       - LAMBDA_REMOVE_CONTAINERS=0

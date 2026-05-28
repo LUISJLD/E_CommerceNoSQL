@@ -111,20 +111,13 @@ def create_lambda_role():
 # ── 3. Lambda (hot-reload) ────────────────────────────────────────────────────
 # LocalStack hot-reload: usa S3Bucket="hot-reload" y S3Key=ruta del HOST.
 # Docker daemon monta esa ruta del host en /var/task del container Lambda.
-# Cold start <1s y cambios al código se reflejan sin redeployar.
+# Cambios al código se reflejan sin redeployar.
 
 def _detect_host_lambdas_path() -> str:
-    """Detecta la ruta del host donde están las lambdas.
-
-    En Docker-in-Docker, /app/lambdas es interna. Necesitamos la ruta
-    que Docker daemon (host) usa para montar ese volumen.
-    """
-    # 1. Variable explícita del compose
+    """Detecta la ruta del host donde están las lambdas."""
     host_path = os.getenv("LAMBDA_HOST_PROJECT_PATH")
     if host_path:
         return host_path.replace("\\", "/") + "/lambdas"
-
-    # 2. Docker inspect del container actual
     import subprocess as sp
     try:
         result = sp.run(
@@ -136,8 +129,6 @@ def _detect_host_lambdas_path() -> str:
             return result.stdout.strip().replace("\\", "/")
     except Exception:
         pass
-
-    # 3. Fallback — ruta interna (funciona si LocalStack corre sin Docker-in-Docker)
     return "/app/lambdas"
 
 def _install_shared_deps() -> None:
