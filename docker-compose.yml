@@ -1,25 +1,58 @@
-version: '3.9'
-
 services:
-
-  dynamodb:
-    image: amazon/dynamodb-local
-    container_name: dynamodb_local
+  redis:
+    image: redis:7-alpine
+    container_name: redis_cache
     ports:
-      - "3000:8000"
-    command: "-jar DynamoDBLocal.jar -sharedDb -inMemory"
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
 
-  web:
-    build: .
-    container_name: django_app
+  localstack:
+    image: localstack/localstack:3.4
+    container_name: localstack
     ports:
-      - "8000:8000"
-    volumes:
-      - .:/app
-    depends_on:
-      - dynamodb
+      - "4566:4566"
     environment:
-      - AWS_ACCESS_KEY_ID=local
-      - AWS_SECRET_ACCESS_KEY=local
-      - AWS_REGION_NAME=us-east-1
-      - DYNAMODB_ENDPOINT_URL=http://dynamodb:8000
+      - SERVICES=cloudformation,lambda,apigateway,dynamodb,iam,logs,s3,ssm,sts,ecr
+      - DEFAULT_REGION=us-east-1
+      - AWS_DEFAULT_REGION=us-east-1
+      - LAMBDA_DOCKER_NETWORK=e_commercenosql_default
+      - LAMBDA_RUNTIME_ENVIRONMENT_TIMEOUT=60
+      - DEBUG=0
+      - LAMBDA_REMOVE_CONTAINERS=0
+      - AWS_ACCESS_KEY_ID=test
+      - AWS_SECRET_ACCESS_KEY=test
+      - DYNAMODB_ENDPOINT_URL=http://localstack:4566
+      - TABLE_NAME=Ecommerce
+      - REDIS_HOST=redis_cache
+      - REDIS_PORT=6379
+      - CACHE_TTL_SECONDS=30
+      - CART_TTL_SECONDS=60
+      - LAMBDA_HOST_PROJECT_PATH=${LAMBDA_HOST_PROJECT_PATH:-}
+    volumes:
+      - "/var/run/docker.sock:/var/run/docker.sock"
+      - "./localstack_data:/var/lib/localstack"
+      - "./infrastructure/init-localstack.sh:/etc/localstack/init/ready.d/01_init.sh"
+      - "./infrastructure/deploy.py:/etc/localstack/init/ready.d/01_deploy.py"
+      - "./seed-data.py:/etc/localstack/init/ready.d/02_seed.py"
+      - "./lambdas:/app/lambdas"
+      - "./client:/app/client"
+    depends_on:
+      redis:
+        condition: service_healthy
+    networks:
+      - default
+
+  frontend:
+    build: ./client
+    container_name: ecocart_frontend
+    ports:
+      - "5173:5173"
+    volumes:
+      - ./client:/app
+      - /app/node_modules
+    depends_on:
+      - localstack

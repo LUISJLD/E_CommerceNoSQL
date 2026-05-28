@@ -1,4 +1,0 @@
-Django==5.2.13
-djangorestframework
-boto3
-gunicorn

@@ -1,10 +1,18 @@
 # Ignore Python bytecode files
 *.pyc
-__pycache__/    
+__pycache__/
 
 # Ignore environment variables files
 .env
+.env.production
+.env.local
+.env.development
+.env.test
+.env.example
 venv/
+env/
+ENV/
+.venv/
 
 # Django stuff:
 *.log
@@ -14,9 +22,59 @@ __pycache__/
 local_settings.py
 /staticfiles/
 
+# Node.js/React stuff:
+node_modules/
+frontend/node_modules/
+build/
+dist/
+.cache/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
 
-# VSCode settings
+# CDK stuff:
+cdk.out/
+infrastructure/cdk.out/
+
+# LocalStack data:
+localstack_data/
+
+# Lambda hot-reload: shared/ copies, pip deps, and markers
+lambdas/*/shared/
+lambdas/*/_deps_installed
+lambdas/*/redis/
+lambdas/*/redis-*.dist-info/
+lambdas/*/bin/
+lambdas/*/async_timeout*
+lambdas/shared/_deps_installed
+lambdas/shared/redis/
+lambdas/shared/redis-*.dist-info/
+lambdas/shared/bin/
+
+# Testing:
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+
+# IDE and editors:
 .vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS generated files:
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
 
 # Ignnore migration files
 */migrations/
+
+cdk.out/
+package-lock.json
