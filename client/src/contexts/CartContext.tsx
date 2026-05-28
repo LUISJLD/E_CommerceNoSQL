@@ -167,8 +167,9 @@ export function CartProvider({
   }, [userId]); // <-- userId como dependencia, no loadCart
 
   const addItem = useCallback(async (product: Product) => {
+    // Actualización optimista: UI cambia inmediatamente
+    dispatch({ type: "ADD_ITEM", payload: product });
     try {
-      console.log("[Cart] POST", product.id, "→", userId);
       const token = localStorage.getItem('ecommerce_token');
       const response = await fetch(`${API_URL}/cart/${userId}`, {
         method: "POST",
@@ -178,19 +179,21 @@ export function CartProvider({
         },
         body: JSON.stringify({ productId: product.id, qty: 1, price: product.price }),
       });
-
       if (!response.ok) {
-        console.error("[Cart] POST error:", response.status, response.statusText);
-        return;
+        // Revertir si falló
+        dispatch({ type: "REMOVE_ITEM", payload: product.id });
+        console.error("[Cart] POST error:", response.status);
       }
-
-      await refreshCart();
     } catch (err) {
+      dispatch({ type: "REMOVE_ITEM", payload: product.id });
       console.error("[Cart] addItem error:", err);
     }
-  }, [userId, refreshCart]);
+  }, [userId]);
 
   const removeItem = useCallback(async (productId: string) => {
+    // Guardar snapshot para revertir si falla
+    const snapshot = state.items;
+    dispatch({ type: "REMOVE_ITEM", payload: productId });
     try {
       const token = localStorage.getItem('ecommerce_token');
       const response = await fetch(
@@ -202,17 +205,15 @@ export function CartProvider({
           },
         }
       );
-
       if (!response.ok) {
-        console.error("[Cart] DELETE error:", response.status, response.statusText);
-        return;
+        dispatch({ type: "SET_ITEMS", payload: snapshot });
+        console.error("[Cart] DELETE error:", response.status);
       }
-
-      await refreshCart();
     } catch (err) {
+      dispatch({ type: "SET_ITEMS", payload: snapshot });
       console.error("[Cart] removeItem error:", err);
     }
-  }, [userId, refreshCart]);
+  }, [userId, state.items]);
 
   const clear = useCallback(() => dispatch({ type: "CLEAR" }), []);
 
