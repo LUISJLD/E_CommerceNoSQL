@@ -1,0 +1,307 @@
+{
+  "_type": "export",
+  "__export_format": 4,
+  "__export_date": "2026-05-28T21:00:00.000Z",
+  "__export_source": "insomnia.desktop.app:v2024.1.0",
+  "resources": [
+    {
+      "_id": "wrk_ecocart",
+      "parentId": null,
+      "_type": "workspace",
+      "name": "EcoCart API",
+      "description": "E-Commerce NoSQL — API REST (LocalStack)",
+      "scope": "collection"
+    },
+    {
+      "_id": "env_base",
+      "parentId": "wrk_ecocart",
+      "_type": "environment",
+      "name": "Local (Docker)",
+      "data": {
+        "base_url": "http://localhost:5173/localstack/restapis/{{ api_id }}/prod/_user_request_",
+        "api_id": "REPLACE_WITH_YOUR_API_ID",
+        "token": ""
+      }
+    },
+    {
+      "_id": "fld_auth",
+      "parentId": "wrk_ecocart",
+      "_type": "request_group",
+      "name": "Auth"
+    },
+    {
+      "_id": "fld_products",
+      "parentId": "wrk_ecocart",
+      "_type": "request_group",
+      "name": "Products (Public)"
+    },
+    {
+      "_id": "fld_cart",
+      "parentId": "wrk_ecocart",
+      "_type": "request_group",
+      "name": "Cart"
+    },
+    {
+      "_id": "fld_orders",
+      "parentId": "wrk_ecocart",
+      "_type": "request_group",
+      "name": "Orders"
+    },
+    {
+      "_id": "fld_users",
+      "parentId": "wrk_ecocart",
+      "_type": "request_group",
+      "name": "Users"
+    },
+    {
+      "_id": "fld_admin",
+      "parentId": "wrk_ecocart",
+      "_type": "request_group",
+      "name": "Admin"
+    },
+    {
+      "_id": "req_login",
+      "parentId": "fld_auth",
+      "_type": "request",
+      "name": "Login",
+      "method": "POST",
+      "url": "{{ base_url }}/auth/login",
+      "headers": [
+        { "name": "Content-Type", "value": "application/json" }
+      ],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"email\": \"admin@ecommerce.com\",\n  \"password\": \"admin123\"\n}"
+      }
+    },
+    {
+      "_id": "req_login_user",
+      "parentId": "fld_auth",
+      "_type": "request",
+      "name": "Login (User)",
+      "method": "POST",
+      "url": "{{ base_url }}/auth/login",
+      "headers": [
+        { "name": "Content-Type", "value": "application/json" }
+      ],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"email\": \"jgarcia@gmail.com\",\n  \"password\": \"user123\"\n}"
+      }
+    },
+    {
+      "_id": "req_register",
+      "parentId": "fld_auth",
+      "_type": "request",
+      "name": "Register",
+      "method": "POST",
+      "url": "{{ base_url }}/auth/register",
+      "headers": [
+        { "name": "Content-Type", "value": "application/json" }
+      ],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"name\": \"Nuevo Usuario\",\n  \"email\": \"nuevo@test.com\",\n  \"password\": \"test123\"\n}"
+      }
+    },
+    {
+      "_id": "req_get_products",
+      "parentId": "fld_products",
+      "_type": "request",
+      "name": "Get All Products",
+      "method": "GET",
+      "url": "{{ base_url }}/products",
+      "headers": []
+    },
+    {
+      "_id": "req_get_cart",
+      "parentId": "fld_cart",
+      "_type": "request",
+      "name": "Get Cart",
+      "method": "GET",
+      "url": "{{ base_url }}/cart/jgarcia@gmail.com",
+      "headers": [
+        { "name": "Authorization", "value": "Bearer {{ token }}" }
+      ]
+    },
+    {
+      "_id": "req_add_to_cart",
+      "parentId": "fld_cart",
+      "_type": "request",
+      "name": "Add to Cart",
+      "method": "POST",
+      "url": "{{ base_url }}/cart/jgarcia@gmail.com",
+      "headers": [
+        { "name": "Content-Type", "value": "application/json" },
+        { "name": "Authorization", "value": "Bearer {{ token }}" }
+      ],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"productId\": \"phone-x100\",\n  \"qty\": 1,\n  \"price\": 850000\n}"
+      }
+    },
+    {
+      "_id": "req_remove_from_cart",
+      "parentId": "fld_cart",
+      "_type": "request",
+      "name": "Remove from Cart",
+      "method": "DELETE",
+      "url": "{{ base_url }}/cart/jgarcia@gmail.com?productId=phone-x100",
+      "headers": [
+        { "name": "Authorization", "value": "Bearer {{ token }}" }
+      ]
+    },
+    {
+      "_id": "req_create_order",
+      "parentId": "fld_orders",
+      "_type": "request",
+      "name": "Create Order (Checkout)",
+      "method": "POST",
+      "url": "{{ base_url }}/orders",
+      "headers": [
+        { "name": "Content-Type", "value": "application/json" },
+        { "name": "Authorization", "value": "Bearer {{ token }}" }
+      ],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"userId\": \"jgarcia@gmail.com\"\n}"
+      }
+    },
+    {
+      "_id": "req_get_user_orders",
+      "parentId": "fld_orders",
+      "_type": "request",
+      "name": "Get User Orders",
+      "method": "GET",
+      "url": "{{ base_url }}/user/jgarcia@gmail.com/orders",
+      "headers": [
+        { "name": "Authorization", "value": "Bearer {{ token }}" }
+      ]
+    },
+    {
+      "_id": "req_get_order_items",
+      "parentId": "fld_orders",
+      "_type": "request",
+      "name": "Get Order Items",
+      "method": "GET",
+      "url": "{{ base_url }}/orders/102/items",
+      "headers": [
+        { "name": "Authorization", "value": "Bearer {{ token }}" }
+      ]
+    },
+    {
+      "_id": "req_get_order_by_id",
+      "parentId": "fld_orders",
+      "_type": "request",
+      "name": "Get Order by ID",
+      "method": "GET",
+      "url": "{{ base_url }}/orders/102",
+      "headers": [
+        { "name": "Authorization", "value": "Bearer {{ token }}" }
+      ]
+    },
+    {
+      "_id": "req_get_all_users",
+      "parentId": "fld_users",
+      "_type": "request",
+      "name": "Get All Users",
+      "method": "GET",
+      "url": "{{ base_url }}/users",
+      "headers": [
+        { "name": "Authorization", "value": "Bearer {{ token }}" }
+      ]
+    },
+    {
+      "_id": "req_get_user_profile",
+      "parentId": "fld_users",
+      "_type": "request",
+      "name": "Get User Profile",
+      "method": "GET",
+      "url": "{{ base_url }}/users/jgarcia@gmail.com",
+      "headers": [
+        { "name": "Authorization", "value": "Bearer {{ token }}" }
+      ]
+    },
+    {
+      "_id": "req_admin_get_products",
+      "parentId": "fld_admin",
+      "_type": "request",
+      "name": "Get Products (Admin)",
+      "method": "GET",
+      "url": "{{ base_url }}/admin/products",
+      "headers": [
+        { "name": "Authorization", "value": "Bearer {{ token }}" }
+      ]
+    },
+    {
+      "_id": "req_admin_create_product",
+      "parentId": "fld_admin",
+      "_type": "request",
+      "name": "Create Product",
+      "method": "POST",
+      "url": "{{ base_url }}/admin/products",
+      "headers": [
+        { "name": "Content-Type", "value": "application/json" },
+        { "name": "Authorization", "value": "Bearer {{ token }}" }
+      ],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"name\": \"Tablet Pro 10\",\n  \"price\": 1500000,\n  \"stock\": 10,\n  \"category\": \"Electrónica\",\n  \"image\": \"https://placehold.co/200x200/e3f2fd/333?text=Tablet\"\n}"
+      }
+    },
+    {
+      "_id": "req_admin_update_product",
+      "parentId": "fld_admin",
+      "_type": "request",
+      "name": "Update Product",
+      "method": "PUT",
+      "url": "{{ base_url }}/admin/products/phone-x100",
+      "headers": [
+        { "name": "Content-Type", "value": "application/json" },
+        { "name": "Authorization", "value": "Bearer {{ token }}" }
+      ],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"name\": \"Teléfono X100 Pro\",\n  \"price\": 950000,\n  \"stock\": 20\n}"
+      }
+    },
+    {
+      "_id": "req_admin_delete_product",
+      "parentId": "fld_admin",
+      "_type": "request",
+      "name": "Delete Product",
+      "method": "DELETE",
+      "url": "{{ base_url }}/admin/products/phone-x100",
+      "headers": [
+        { "name": "Authorization", "value": "Bearer {{ token }}" }
+      ]
+    },
+    {
+      "_id": "req_admin_get_orders",
+      "parentId": "fld_admin",
+      "_type": "request",
+      "name": "Get All Orders (Admin)",
+      "method": "GET",
+      "url": "{{ base_url }}/admin/orders",
+      "headers": [
+        { "name": "Authorization", "value": "Bearer {{ token }}" }
+      ]
+    },
+    {
+      "_id": "req_admin_update_order_status",
+      "parentId": "fld_admin",
+      "_type": "request",
+      "name": "Update Order Status",
+      "method": "PUT",
+      "url": "{{ base_url }}/admin/orders/102/status",
+      "headers": [
+        { "name": "Content-Type", "value": "application/json" },
+        { "name": "Authorization", "value": "Bearer {{ token }}" }
+      ],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"status\": \"Enviado\"\n}"
+      }
+    }
+  ]
+}
