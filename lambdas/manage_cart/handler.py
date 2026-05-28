@@ -1,27 +1,3 @@
-"""
-manage_cart
-───────────
-Gestiona el carrito de compras de un usuario. Es la pieza central del
-requisito de "cache aplicada al carrito".
-
-  GET    /cart/{user_id}                      →  lee el carrito (cache-aside)
-  POST   /cart/{user_id}                      →  agrega/incrementa un producto
-  DELETE /cart/{user_id}?productId=<id>       →  elimina un producto
-
-Modelo de datos (ítems separados — un ítem de DynamoDB por producto):
-  pk = USER#<user_id>
-  sk = CART#<product_id>
-  atributos: qty (Number), price (Number)
-
-Estrategia de cache (cache-aside):
-  - GET lee de Redis bajo la clave cart:<user_id>; si hay miss, lee
-    DynamoDB y repuebla Redis con TTL = CART_TTL_SECONDS.
-  - POST y DELETE INVALIDAN la clave (delete en Redis), de modo que
-    el siguiente GET refleja el estado real desde DynamoDB.
-
-Si Redis no está disponible, cache_client cae a un store en memoria,
-así que el carrito sigue funcionando (lee siempre de DynamoDB).
-"""
 import os
 import json
 import logging
