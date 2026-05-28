@@ -19,97 +19,226 @@ Sistema de e-commerce desarrollado para la cátedra de **Bases de Datos No Relac
 | Capa | Tecnología |
 |------|-----------|
 | Base de Datos | Amazon DynamoDB (Single Table Design) |
-| Cache | Redis 7 |
-| Backend | Funciones AWS Lambda (Python 3.12) + Amazon API Gateway |
+| Cache | Redis 7 (cache-aside pattern) |
+| Backend | 11 funciones AWS Lambda (Python 3.12) + Amazon API Gateway REST |
 | Frontend | React 19 + TypeScript + Vite 8 + Tailwind CSS v4 |
-| Infraestructura as Code | AWS CDK v2 |
-| Emulación Local | LocalStack + Docker Compose |
+| Infraestructura | Script de despliegue automático con boto3 (deploy.py) |
+| Emulación Local | LocalStack 3.4 + Docker Compose |
+| Autenticación | JWT (PyJWT) con roles admin/user |
+
+---
+
+## Arquitectura
+
+```text
+┌─────────────┐       ┌──────────────────────────────────────────────────┐
+│   Browser   │       │              Docker Compose                       │
+│  (React)    │       │                                                   │
+│ localhost:  │──────▶│  ┌─────────┐    ┌────────────────────────────┐   │
+│    5173     │       │  │  Vite   │───▶│      LocalStack :4566      │   │
+└─────────────┘       │  │ (proxy) │    │                            │   │
+                      │  └─────────┘    │  ┌──────────────────────┐  │   │
+                      │                 │  │    API Gateway REST   │  │   │
+                      │                 │  └──────────┬───────────┘  │   │
+                      │                 │             │               │   │
+                      │                 │  ┌──────────▼───────────┐  │   │
+                      │                 │  │   Lambda Functions    │  │   │
+                      │                 │  │  (11 microservicios)  │  │   │
+                      │                 │  └───┬─────────────┬────┘  │   │
+                      │                 │      │             │        │   │
+                      │                 │  ┌───▼────┐   ┌───▼─────┐  │   │
+                      │                 │  │DynamoDB│   │  Redis   │  │   │
+                      │                 │  │(Single │   │ (Cache)  │  │   │
+                      │                 │  │ Table) │   │  :6379   │  │   │
+                      │                 │  └────────┘   └─────────┘  │   │
+                      │                 └────────────────────────────┘   │
+                      └──────────────────────────────────────────────────┘
+```
 
 ---
 
 ## Estructura del Proyecto
 
 ```text
-├── Frontend/                # React + TypeScript (Vite)
+├── client/                  # React + TypeScript (Vite)
 │   ├── src/
 │   │   ├── contexts/        # Estado global (Auth, Cart)
 │   │   ├── features/        # Módulos por dominio (products, cart, auth)
 │   │   ├── pages/           # Vistas principales y Panel de Admin
-│   │   └── services/        # Capa de datos (Llamadas al API Gateway)
+│   │   ├── services/        # Capa de datos (llamadas al API Gateway)
+│   │   └── hooks/           # Custom hooks (useProducts)
 │   └── Dockerfile
-├── infrastructure/          # Definición de Infraestructura (AWS CDK)
-│   ├── stacks/              # Stacks (API, DynamoDB, Lambda, Redis)
-│   └── app.py               # Punto de entrada de CDK
+├── infrastructure/          # Despliegue automatizado
+│   ├── deploy.py            # Script principal (crea DynamoDB, IAM, Lambdas, API GW)
+│   └── init-localstack.sh   # Entrypoint que orquesta deploy + seed
 ├── lambdas/                 # Funciones Lambda (Backend)
-│   ├── auth/                # Registro e inicio de sesión
-│   ├── manage_cart/         # Carrito de compras (Cache-aside con Redis)
-│   ├── manage_products/     # Catálogo y administración
-│   └── ...                  # Otras funciones de dominio
-├── docker-compose.yml       # Orquestación de LocalStack, Redis y Frontend
-└── seed-data.py             # Script opcional para poblar base de datos inicial
+│   ├── auth/                # Registro e inicio de sesión (JWT)
+│   ├── manage_cart/         # Carrito de compras (cache-aside con Redis)
+│   ├── manage_products/     # CRUD de productos (admin)
+│   ├── manage_orders/       # Gestión de órdenes (admin)
+│   ├── create_order/        # Checkout (crear orden desde carrito)
+│   ├── get_products/        # Catálogo público
+│   ├── get_all_users/       # Listar usuarios
+│   ├── get_user_profile/    # Perfil de usuario
+│   ├── get_user_orders/     # Historial de pedidos
+│   ├── get_order_by_id/     # Detalle de orden
+│   ├── get_order_items/     # Items de una orden
+│   └── shared/              # Módulos compartidos (dynamo, cache, responses, auth)
+├── docker-compose.yml       # Orquestación: LocalStack + Redis + Frontend
+├── seed-data.py             # Datos iniciales (productos, usuarios, órdenes)
+└── .env.example             # Variables de entorno de referencia
 ```
 
 ---
 
-## Ejecución (Paso a Paso)
+## Ejecución
 
-Para levantar el proyecto en tu entorno local, sigue este orden estricto:
+### Requisitos previos
+- Docker Desktop (con WSL2 en Windows)
+- Git
 
-### 1. Levantar los Servicios Base (Docker)
-Abre una terminal en la raíz del proyecto y ejecuta:
+### Levantar el proyecto
+
 ```bash
-docker compose up --build -d
+git clone https://github.com/LUISJLD/E_CommerceNoSQL.git
+cd E_CommerceNoSQL
 ```
-Esto levantará **LocalStack** (emulador de AWS), **Redis** y el servidor de desarrollo del **Frontend**.
 
-### 2. Desplegar la Infraestructura (Backend)
-Las funciones Lambda y la base de datos se despliegan utilizando AWS CDK hacia LocalStack. En una terminal, entra a la carpeta de infraestructura y despliega todo:
+Crear archivo `.env` en la raíz con la ruta absoluta del proyecto:
+
 ```bash
-cd infrastructure
-cdklocal deploy --all --require-approval never
-```
-*(Este comando compilará el código en Python, creará la tabla en DynamoDB y publicará las rutas en el API Gateway local).*
+# Windows
+echo LAMBDA_HOST_PROJECT_PATH=C:/Users/TU_USUARIO/ruta/al/E_CommerceNoSQL > .env
 
-### 3. Acceder a la Aplicación
-Una vez que el CDK termine de desplegar exitosamente:
-- **Tienda (Frontend):** `http://localhost:5173`
-- **LocalStack (AWS en local):** `http://localhost:4566`
+# Linux/Mac
+echo LAMBDA_HOST_PROJECT_PATH=$(pwd) > .env
+```
+
+Levantar todo:
+
+```bash
+docker compose up --build
+```
+
+Esperar ~90 segundos a que el deploy automático complete (verás en los logs de localstack: `Deploy completado`). Luego acceder a:
+
+- **Tienda:** http://localhost:5173
+- **LocalStack:** http://localhost:4566
+
+### Credenciales por defecto
+
+| Rol | Email | Contraseña |
+|-----|-------|------------|
+| Admin | `admin@ecommerce.com` | `admin123` |
+| Usuario | `jgarcia@gmail.com` | `user123` |
+| Usuario | `ana.mtz@outlook.com` | `user123` |
+| Usuario | `daniel@unimag.edu.co` | `user123` |
+
+---
+
+## API REST — Endpoints
+
+### Públicos
+
+| Método | Ruta | Lambda | Descripción |
+|--------|------|--------|-------------|
+| POST | `/auth/login` | Auth | Iniciar sesión |
+| POST | `/auth/register` | Auth | Registrar usuario |
+| GET | `/products` | GetAllProducts | Listar catálogo |
+
+### Autenticados (requieren JWT)
+
+| Método | Ruta | Lambda | Descripción |
+|--------|------|--------|-------------|
+| GET | `/cart/{user_id}` | ManageUserCart | Ver carrito |
+| POST | `/cart/{user_id}` | ManageUserCart | Agregar al carrito |
+| DELETE | `/cart/{user_id}` | ManageUserCart | Quitar del carrito |
+| POST | `/orders` | CreateOrder | Crear orden (checkout) |
+| GET | `/user/{user_id}/orders` | GetUserOrders | Historial de pedidos |
+| GET | `/orders/{order_id}/items` | GetOrderItems | Items de una orden |
+| GET | `/users/{user_id}` | GetUserProfile | Perfil de usuario |
+
+### Admin (requieren JWT con role=admin)
+
+| Método | Ruta | Lambda | Descripción |
+|--------|------|--------|-------------|
+| GET | `/admin/products` | GetAllProducts | Listar productos |
+| POST | `/admin/products` | ManageProducts | Crear producto |
+| PUT | `/admin/products/{id}` | ManageProducts | Editar producto |
+| DELETE | `/admin/products/{id}` | ManageProducts | Eliminar producto |
+| GET | `/admin/orders` | ManageOrders | Listar órdenes |
+| PUT | `/admin/orders/{id}/status` | ManageOrders | Cambiar estado |
 
 ---
 
 ## Modelado de Datos (Single Table Design)
 
-| Entidad | Partition Key (pk) | Sort Key (sk) | Propósito |
-|---------|----|----|-----------|
-| Usuario | `USER#<email>` | `PROFILE` | Información básica del usuario e inicio de sesión |
-| Orden | `USER#<email>` | `ORDER#<id>` | Cabecera del pedido e historial de compras |
-| Carrito | `USER#<email>` | `CART#<prod>` | Producto guardado temporalmente en el carrito |
-| Producto | `CATALOG#main` | `PRODUCT#<id>` | Catálogo general de productos |
+Toda la información se almacena en una sola tabla DynamoDB (`Ecommerce`) con un GSI:
+
+| Entidad | Partition Key (pk) | Sort Key (sk) | GSI1PK | GSI1SK | Propósito |
+|---------|-------------------|---------------|--------|--------|-----------|
+| Usuario | `USER#<email>` | `PROFILE` | — | — | Perfil, credenciales y rol |
+| Orden (por usuario) | `USER#<email>` | `ORDER#<id>` | `ORDER#<id>` | `METADATA` | Cabecera del pedido |
+| Items de orden | `ORDER#<id>` | `ITEM#<prod>` | — | — | Detalle de productos comprados |
+| Carrito | `USER#<email>` | `CART#<prod>` | — | — | Producto en carrito (temporal) |
+| Producto | `CATALOG#main` | `PRODUCT#<id>` | — | — | Catálogo general |
+
+**GSI1** permite buscar una orden por su ID sin conocer el usuario: `Query GSI1 WHERE gsi1pk = ORDER#<id>`.
 
 ---
 
-## Solución de Problemas (Troubleshooting)
+## Patrón Cache-Aside (Redis)
 
-Durante el desarrollo hemos documentado las soluciones a los problemas más comunes al momento de desplegar el entorno:
-
-### 1. El comando `cdklocal deploy` pide seleccionar un Stack
-**Problema:** Al ejecutar el deploy, aparece el mensaje: *"Since this app includes more than a single stack, specify which stacks to use..."*  
-**Solución:** Nuestra infraestructura tiene múltiples componentes (Dynamo, Redis, Lambda). Siempre debes desplegar con el flag `--all` para incluir todas las partes de la arquitectura:
-```bash
-cdklocal deploy --all
+```text
+Cliente → Lambda → ¿Redis tiene el dato?
+                      ├── SÍ → Responde desde cache (~2ms)
+                      └── NO → Consulta DynamoDB → Guarda en Redis → Responde (~50ms)
 ```
 
-### 2. El comando `cdklocal` no se reconoce
-**Problema:** La terminal arroja *'cdklocal' command not found*.  
-**Solución:** Asegúrate de tener instalado el CLI local de AWS CDK en tu entorno global mediante Node.js:
+- TTL general: 30 segundos
+- TTL carrito: 60 segundos
+- Fallback: si Redis no está disponible, las Lambdas consultan DynamoDB directamente
+
+---
+
+## Funcionalidades
+
+### Usuario
+- Registro e inicio de sesión con JWT
+- Explorar catálogo con filtro por categoría y búsqueda
+- Agregar/quitar productos del carrito
+- Realizar compra (checkout)
+- Ver historial de pedidos
+
+### Administrador
+- Dashboard con resumen de órdenes y productos
+- CRUD completo de productos (con imágenes vía S3)
+- Ver y gestionar todas las órdenes (cambiar estado)
+
+---
+
+## Solución de Problemas
+
+### El frontend no carga (se queda en blanco)
+Verificar que el deploy completó revisando los logs:
 ```bash
-npm install -g aws-cdk-local aws-cdk
+docker logs localstack 2>&1 | grep "Deploy completado"
 ```
+Si no aparece, revisar errores con `docker logs localstack`.
 
-### 3. Falla el despliegue por dependencias de Python (Pip / Virtualenv)
-**Problema:** Al hacer `cdklocal deploy`, salen alertas de permisos sobre `pip` o errores de entorno virtual.  
-**Solución:** El entorno de CDK usa Python. Asegúrate de tener activado el entorno virtual (`.venv/bin/activate` o `Scripts\activate` en Windows) dentro de la carpeta `infrastructure` antes de hacer el despliegue.
+### Error de CORS en el browser
+Verificar que los contenedores están corriendo:
+```bash
+docker ps
+```
+El frontend debe poder alcanzar a `localstack:4566` a través del proxy de Vite.
 
-### 4. No veo la información del Caché en el Carrito (Inspector)
-**Problema:** Al inspeccionar el carrito en el Frontend, el tiempo de carga es alto o aparece `undefined` en la fuente de datos.  
-**Solución:** Verifica que el contenedor de Redis esté corriendo (`docker ps`). Si el contenedor de Redis falla o se apaga, las Lambdas seguirán funcionando (haciendo peticiones directas a DynamoDB como mecanismo de caída), pero perderás la altísima velocidad del caché en memoria (tiempos de ~100ms).
+### El carrito no muestra datos de caché
+Verificar que Redis está healthy:
+```bash
+docker exec redis_cache redis-cli ping
+```
+Si Redis está caído, las Lambdas funcionan (fallback a DynamoDB) pero sin la velocidad del cache.
+
+### Los cambios al código de Lambdas no se reflejan
+LocalStack usa **hot-reload**: los cambios en `lambdas/` se reflejan automáticamente sin reiniciar. Si no funciona, verificar que `LAMBDA_HOST_PROJECT_PATH` está correctamente configurado en `.env`.

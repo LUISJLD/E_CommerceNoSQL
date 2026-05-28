@@ -8,7 +8,9 @@ __pycache__/
 .env.local
 .env.development
 .env.test
-.env.example
+
+# Artifacts
+output.json
 venv/
 env/
 ENV/
