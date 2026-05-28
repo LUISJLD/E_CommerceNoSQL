@@ -10,11 +10,11 @@ export default defineConfig({
   server: {
     proxy: {
       '/api': {
-        target: 'http://localhost:4566/restapis',
+        target: 'http://127.0.0.1:4566/restapis',
         changeOrigin: true,
         rewrite: (path) => {
-          // Lee el ID real del API Gateway desde env o archivo
-          const apiId = process.env.VITE_API_ID || 'PLACEHOLDER'
+          // Usamos el ID estático 'ecommerce123' que configuramos en lambda_stack.py
+          const apiId = process.env.VITE_API_ID || 'ecommerce123'
           return path.replace(/^\/api/, `/${apiId}/prod/_user_request_`)
         },
       },
