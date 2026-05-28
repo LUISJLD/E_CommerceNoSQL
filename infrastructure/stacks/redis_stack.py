@@ -9,12 +9,12 @@ class RedisStack(Stack):
     def __init__(self, scope: Construct, id: str, **kwargs):
         super().__init__(scope, id, **kwargs)
 
-        # 🔥 Detectar si estamos en LocalStack
+        #  Detectar si estamos en LocalStack
         is_local = True
 
         if is_local:
             # ──────────────────────────────────────────────
-            # ✅ MODO LOCAL (Docker Redis)
+            #  MODO LOCAL (Docker Redis)
             # ──────────────────────────────────────────────
             self.redis_host = "redis_cache"
             self.redis_port = "6379"
@@ -26,7 +26,7 @@ class RedisStack(Stack):
 
         else:
             # ──────────────────────────────────────────────
-            # ☁️ MODO AWS REAL (ElastiCache)
+            #  MODO AWS REAL (ElastiCache)
             # ──────────────────────────────────────────────
 
             vpc = ec2.Vpc(self, "RedisVpc",
