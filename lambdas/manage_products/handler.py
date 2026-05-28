@@ -1,104 +1,146 @@
 import json
+import logging
 import os
-import sys
 import uuid
-
- sys.path.insert(0, os.path.dirname(__file__))
-
-from shared.dynamo_client import get_table
-from shared.cache_client import get_redis
+import boto3
 from decimal import Decimal
 
-TTL = int(os.environ.get('CACHE_TTL_SECONDS', '60'))
+from shared.dynamo_client import get_table
+from shared.responses import response, no_content
+from shared.auth_utils import require_admin
+
+logging.getLogger().setLevel(logging.INFO)
+
+IMAGES_BUCKET = os.environ.get("IMAGES_BUCKET_NAME")
+
+s3_client = boto3.client(
+    's3',
+    endpoint_url=os.environ.get('DYNAMODB_ENDPOINT_URL'),
+    aws_access_key_id='local',
+    aws_secret_access_key='local',
+    region_name='us-east-1'
+)
+
+def _generate_upload_url(file_name, file_type):
+    """Genera una URL firmada para subir una imagen de producto."""
+    if not IMAGES_BUCKET:
+        return None
+
+    key = f"products/{uuid.uuid4()}-{file_name}"
+
+    presigned_url = s3_client.generate_presigned_url(
+        'put_object',
+        Params={
+            'Bucket': IMAGES_BUCKET,
+            'Key': key,
+            'ContentType': file_type,
+            'ACL': 'public-read'
+        },
+        ExpiresIn=3600
+    )
+
+    presigned_url = presigned_url.replace("localstack:4566", "localhost:4566")
+    public_url = f"http://localhost:4566/{IMAGES_BUCKET}/{key}"
+
+    return presigned_url, public_url
 
 
-def _invalidate_product_cache(category=None):
-    try:
-        r = get_redis()
-        r.delete('products:all')
-        r.delete('products:cat:None')
-        if category:
-            r.delete(f'products:cat:{category}')
-    except Exception:
-        pass
-
-
-def lambda_handler(event, context):
-    http_method = event.get('httpMethod', '')
-    path_params = event.get('pathParameters') or {}
-
-    headers = {
-        'Content-Type': 'application/json',
-        'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Headers': 'Content-Type',
-        'Access-Control-Allow-Methods': 'OPTIONS,GET,POST,DELETE',
-    }
-
-    if http_method == 'OPTIONS':
-        return {'statusCode': 200, 'headers': headers, 'body': ''}
-
-    table = get_table()
-
-    # POST /products — crear producto
-    if http_method == 'POST':
-        try:
-            body = json.loads(event.get('body') or '{}')
-        except json.JSONDecodeError:
-            return {'statusCode': 400, 'headers': headers,
-                    'body': json.dumps({'error': 'Invalid JSON body'})}
-
-        name = body.get('name', '').strip()
-        price = body.get('price')
-        stock = body.get('stock')
-        category = body.get('category', '').strip()
-        image = body.get('image', '').strip()
-
-        if not name or price is None or stock is None or not category:
-            return {'statusCode': 400, 'headers': headers,
-                    'body': json.dumps({'error': 'name, price, stock and category are required'})}
-
-        product_id = body.get('productId') or str(uuid.uuid4())[:8]
-
-        table.put_item(Item={
-            'pk': 'CATALOG#main',
-            'sk': f'PRODUCT#{product_id}',
-            'productId': product_id,
-            'name': name,
-            'price': Decimal(str(price)),
-            'stock': int(stock),
-            'category': category,
-            'image': image,
+def _handle_post(table, body):
+    if body.get("action") == "get_upload_url":
+        file_name = body.get("fileName", "image.jpg")
+        file_type = body.get("fileType", "image/jpeg")
+        upload_url, public_url = _generate_upload_url(file_name, file_type)
+        return response(200, {
+            "uploadUrl": upload_url,
+            "publicUrl": public_url
         })
 
-        _invalidate_product_cache(category)
+    prod_id = body.get("id") or str(uuid.uuid4())[:8]
 
-        return {
-            'statusCode': 201,
-            'headers': headers,
-            'body': json.dumps({'message': 'Product created', 'productId': product_id}),
+    item = {
+        'pk': 'CATALOG#main',
+        'sk': f'PRODUCT#{prod_id}',
+        'productId': prod_id,
+        'name': body.get('name', 'Sin nombre'),
+        'price': Decimal(str(body.get('price', 0))),
+        'stock': body.get('stock', 0),
+        'image': body.get('image', 'https://placehold.co/200x200/e8f5e9/333?text=New+Product'),
+        'category': body.get('category', 'General'),
+    }
+
+    table.put_item(Item=item)
+    return response(201, {"message": "Producto creado", "product": {**item, "price": float(item["price"])}})
+
+def _handle_put(table, prod_id, body):
+    update_expr = []
+    expr_attrs = {}
+
+    if "name" in body:
+        update_expr.append("#name = :name")
+        expr_attrs[":name"] = body["name"]
+    if "price" in body:
+        update_expr.append("price = :price")
+        expr_attrs[":price"] = Decimal(str(body["price"]))
+    if "stock" in body:
+        update_expr.append("stock = :stock")
+        expr_attrs[":stock"] = body["stock"]
+    if "image" in body:
+        update_expr.append("image = :img")
+        expr_attrs[":img"] = body["image"]
+    if "category" in body:
+        update_expr.append("category = :cat")
+        expr_attrs[":cat"] = body["category"]
+
+    if not update_expr:
+        return response(400, {"error": "Nada que actualizar"})
+
+    expr = "SET " + ", ".join(update_expr)
+    expr_names = {"#name": "name"} if "name" in body else None
+
+    try:
+        kwargs = {
+            "Key": {'pk': 'CATALOG#main', 'sk': f'PRODUCT#{prod_id}'},
+            "UpdateExpression": expr,
+            "ExpressionAttributeValues": expr_attrs,
+            "ReturnValues": "ALL_NEW"
         }
+        if expr_names:
+            kwargs["ExpressionAttributeNames"] = expr_names
 
-    # DELETE /products/{product_id} — eliminar producto
-    elif http_method == 'DELETE':
-        product_id = path_params.get('product_id')
-        if not product_id:
-            return {'statusCode': 400, 'headers': headers,
-                    'body': json.dumps({'error': 'Missing product_id'})}
+        res = table.update_item(**kwargs)
 
-        # Leer primero para invalidar la caché de categoría correcta
-        existing = table.get_item(
-            Key={'pk': 'CATALOG#main', 'sk': f'PRODUCT#{product_id}'}
-        ).get('Item')
-        category = existing.get('category') if existing else None
+        updated = res.get("Attributes", {})
+        if "price" in updated:
+            updated["price"] = float(updated["price"])
 
-        table.delete_item(Key={'pk': 'CATALOG#main', 'sk': f'PRODUCT#{product_id}'})
-        _invalidate_product_cache(category)
+        return response(200, {"message": "Producto actualizado", "product": updated})
+    except Exception as e:
+        return response(500, {"error": str(e)})
 
-        return {
-            'statusCode': 200,
-            'headers': headers,
-            'body': json.dumps({'message': 'Product deleted', 'productId': product_id}),
-        }
+def _handle_delete(table, prod_id):
+    table.delete_item(Key={'pk': 'CATALOG#main', 'sk': f'PRODUCT#{prod_id}'})
+    return no_content()
 
-    return {'statusCode': 405, 'headers': headers,
-            'body': json.dumps({'error': 'Method not allowed'})}
+
+@require_admin
+def lambda_handler(event, context):
+    try:
+        http_method = event.get("httpMethod", "")
+        body = json.loads(event.get("body") or "{}")
+        path_params = event.get("pathParameters") or {}
+        prod_id = path_params.get("id")
+
+        table = get_table()
+
+        if http_method == "POST":
+            return _handle_post(table, body)
+        elif http_method == "PUT" and prod_id:
+            return _handle_put(table, prod_id, body)
+        elif http_method == "DELETE" and prod_id:
+            return _handle_delete(table, prod_id)
+
+        return response(405, {"error": "Método no permitido o falta ID"})
+
+    except Exception as e:
+        logging.exception("Error en manage_products")
+        return response(500, {"error": f"Internal server error: {str(e)}"})

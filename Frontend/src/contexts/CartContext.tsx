@@ -43,6 +43,7 @@ interface CartContextValue {
   removeItem: (productId: string) => Promise<void>;
   clear: () => void;
   refreshCart: () => Promise<void>;
+  checkout: (address: string) => Promise<boolean>;
 }
 
 /* =========================================================
@@ -128,8 +129,12 @@ export function CartProvider({
 
       const result = await response.json();
 
-      const backendItems: Array<{ productId: string; qty: number; price: number }> =
-        Array.isArray(result) ? result : [];
+      const backendSource = result.source || "UNKNOWN";
+      const backendData = Array.isArray(result.data) ? result.data : (Array.isArray(result) ? result : []);
+
+      setCacheSource(backendSource);
+
+      const backendItems: Array<{ productId: string; qty: number; price: number }> = backendData;
 
       // Enriquecer con datos del catálogo si están disponibles
       const catalogMap = new Map(catalogRef.current.map((p) => [p.id, p]));
@@ -150,7 +155,7 @@ export function CartProvider({
       });
 
       dispatch({ type: "SET_ITEMS", payload: mappedItems });
-      console.log(`[Cart] ${result.source} | ${elapsed}ms | ${backendItems.length} items`);
+      console.log(`[Cart] ${backendSource} | ${elapsed}ms | ${backendItems.length} items`);
     } catch (err) {
       console.error("[Cart] refreshCart error:", err);
     }
@@ -160,10 +165,9 @@ export function CartProvider({
     try {
       console.log("[Cart] POST", product.id, "→", userId);
       const response = await fetch(`${API_URL}/cart/${userId}`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ productId: product.id, qty: 1, price: product.price }),
-      });
+  method: "POST",
+  body: JSON.stringify({ productId: product.id, qty: 1, price: product.price }),
+});
 
       if (!response.ok) {
         console.error("[Cart] POST error:", response.status, response.statusText);
@@ -196,6 +200,20 @@ export function CartProvider({
 
   const clear = useCallback(() => dispatch({ type: "CLEAR" }), []);
 
+  const checkout = useCallback(async (_address: string): Promise<boolean> => {
+    try {
+      // Importación dinámica para evitar problemas de ciclo o usar el servicio de forma limpia
+      const { createOrder } = await import("../services/orders.service");
+      await createOrder(userId);
+      clear();
+      await refreshCart();
+      return true;
+    } catch (err) {
+      console.error("[Cart] Checkout error:", err);
+      return false;
+    }
+  }, [userId, clear, refreshCart]);
+
   // Carga inicial y recarga si cambia el usuario
   useEffect(() => {
     refreshCart();
@@ -214,6 +232,7 @@ export function CartProvider({
         removeItem,
         clear,
         refreshCart,
+        checkout,
       }}
     >
       {children}

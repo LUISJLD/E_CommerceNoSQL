@@ -1,6 +1,7 @@
 import boto3
 from decimal import Decimal
 import os
+import hashlib
 
 # Usa variable de entorno o default a LocalStack
 endpoint = os.getenv('DYNAMODB_ENDPOINT_URL', 'http://localhost:4566')
@@ -17,6 +18,8 @@ dynamodb = boto3.resource(
 table_name = os.getenv('TABLE_NAME', 'Ecommerce')
 table = dynamodb.Table(table_name)
 
+def hash_password(password: str) -> str:
+    return hashlib.sha256(password.encode('utf-8')).hexdigest()
 
 def seed_products():
     products = [
@@ -87,9 +90,10 @@ def seed_products():
 
 def seed_users_and_orders():
     users = [
-        {'id': 'jgarcia', 'name': 'Juan Garcia', 'email': 'jgarcia@gmail.com', 'address': 'Calle 100 # 12 - 34, Apto 501, Bogotá, Colombia'},
-        {'id': 'ana', 'name': 'Ana Martinez', 'email': 'ana.mtz@outlook.com', 'address': 'Calle 10 #22-45, Santa Marta'},
-        {'id': 'daniel', 'name': 'Daniel Eduardo', 'email': 'daniel@unimag.edu.co', 'address': 'Carrera 5 #18-30, Santa Marta'},
+        {'id': 'admin@ecommerce.com', 'name': 'Administrador', 'email': 'admin@ecommerce.com', 'address': 'Sede Principal', 'role': 'admin', 'password': 'admin123'},
+        {'id': 'jgarcia@gmail.com', 'name': 'Juan Garcia', 'email': 'jgarcia@gmail.com', 'address': 'Calle 100 # 12 - 34, Apto 501, Bogotá, Colombia', 'role': 'user', 'password': 'user123'},
+        {'id': 'ana.mtz@outlook.com', 'name': 'Ana Martinez', 'email': 'ana.mtz@outlook.com', 'address': 'Calle 10 #22-45, Santa Marta', 'role': 'user', 'password': 'user123'},
+        {'id': 'daniel@unimag.edu.co', 'name': 'Daniel Eduardo', 'email': 'daniel@unimag.edu.co', 'address': 'Carrera 5 #18-30, Santa Marta', 'role': 'user', 'password': 'user123'},
     ]
 
     for i, user in enumerate(users):
@@ -102,20 +106,23 @@ def seed_users_and_orders():
             'name': user['name'],
             'email': user['email'],
             'address': user['address'],
+            'role': user['role'],
+            'passwordHash': hash_password(user['password']),
             'payments': ['Visa', 'Efectivo'],
         })
 
-        table.put_item(Item={
-            'pk': f'USER#{u_id}',
-            'sk': f'ORDER#{o_id}',
-            'gsi1pk': f'ORDER#{o_id}',
-            'gsi1sk': 'METADATA',
-            'orderId': o_id,
-            'total': Decimal('850000'),
-            'date': '2026-04-20',
-            'status': 'Entregado',
-            'address': user['address'],
-        })
+        if user['role'] != 'admin':
+            table.put_item(Item={
+                'pk': f'USER#{u_id}',
+                'sk': f'ORDER#{o_id}',
+                'gsi1pk': f'ORDER#{o_id}',
+                'gsi1sk': 'METADATA',
+                'orderId': o_id,
+                'total': Decimal('850000'),
+                'date': '2026-04-20',
+                'status': 'Entregado',
+                'address': user['address'],
+            })
 
         table.put_item(Item={
             'pk': f'ORDER#{o_id}',

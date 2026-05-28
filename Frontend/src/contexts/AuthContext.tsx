@@ -1,69 +1,82 @@
-import { createContext, useContext, useState } from "react";
-import type { ReactNode } from "react";
-import type { User } from "../shared/types";
+import React, { createContext, useContext, useState, useEffect } from 'react';
+import { jwtDecode } from 'jwt-decode';
 
-const STREETS = [
-  "Calle 15", "Carrera 7", "Calle 100", "Transversal 45", "Avenida El Dorado",
-  "Calle 72", "Carrera 13", "Diagonal 127", "Calle 26", "Carrera 30",
-];
-const CITIES = [
-  "Bogotá", "Medellín", "Cali", "Barranquilla", "Santa Marta",
-  "Cartagena", "Bucaramanga", "Manizales", "Pereira", "Cúcuta",
-];
-
-function randomAddress(): string {
-  const street = STREETS[Math.floor(Math.random() * STREETS.length)];
-  const num1   = Math.floor(Math.random() * 150) + 1;
-  const num2   = Math.floor(Math.random() * 99)  + 1;
-  const apt    = Math.floor(Math.random() * 900)  + 100;
-  const city   = CITIES[Math.floor(Math.random() * CITIES.length)];
-  return `${street} #${num1}-${num2}, Apto ${apt}, ${city}`;
+interface User {
+  email: string;
+  name: string;
+  role: 'admin' | 'user';
 }
 
-interface AuthContextValue {
+interface AuthContextType {
   user: User | null;
-  isAuthenticated: boolean;
-  login: (name: string) => void;
+  token: string | null;
+  login: (token: string, userData: User) => void;
   logout: () => void;
+  isAuthenticated: boolean;
+  isAdmin: boolean;
 }
 
-const AuthContext = createContext<AuthContextValue | null>(null);
+const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-const STORAGE_KEY = "ecocart_user";
+export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const [user, setUser] = useState<User | null>(null);
+  const [token, setToken] = useState<string | null>(null);
 
-export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<User | null>(() => {
-    try {
-      const saved = localStorage.getItem(STORAGE_KEY);
-      return saved ? (JSON.parse(saved) as User) : null;
-    } catch {
-      return null;
+  useEffect(() => {
+    // Restaurar sesión desde localStorage al cargar
+    const storedToken = localStorage.getItem('ecommerce_token');
+    if (storedToken) {
+      try {
+        const decoded: any = jwtDecode(storedToken);
+        // Validar expiración
+        if (decoded.exp * 1000 < Date.now()) {
+          logout();
+        } else {
+          setToken(storedToken);
+          setUser({
+            email: decoded.email,
+            name: decoded.name,
+            role: decoded.role,
+          });
+        }
+      } catch (err) {
+        logout();
+      }
     }
-  });
+  }, []);
 
-  const login = (name: string) => {
-    const newUser: User = {
-      username: name.trim().toLowerCase().replace(/\s+/g, "."),
-      address: randomAddress(),
-    };
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(newUser));
-    setUser(newUser);
+  const login = (newToken: string, userData: User) => {
+    localStorage.setItem('ecommerce_token', newToken);
+    setToken(newToken);
+    setUser(userData);
   };
 
   const logout = () => {
-    localStorage.removeItem(STORAGE_KEY);
+    localStorage.removeItem('ecommerce_token');
+    setToken(null);
     setUser(null);
   };
 
   return (
-    <AuthContext value={{ user, isAuthenticated: !!user, login, logout }}>
+    <AuthContext.Provider
+      value={{
+        user,
+        token,
+        login,
+        logout,
+        isAuthenticated: !!user,
+        isAdmin: user?.role === 'admin',
+      }}
+    >
       {children}
-    </AuthContext>
+    </AuthContext.Provider>
   );
-}
+};
 
-export function useAuth(): AuthContextValue {
-  const ctx = useContext(AuthContext);
-  if (!ctx) throw new Error("useAuth must be used within AuthProvider");
-  return ctx;
-}
+export const useAuth = () => {
+  const context = useContext(AuthContext);
+  if (context === undefined) {
+    throw new Error('useAuth debe usarse dentro de un AuthProvider');
+  }
+  return context;
+};

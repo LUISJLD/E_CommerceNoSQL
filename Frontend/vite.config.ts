@@ -9,10 +9,13 @@ export default defineConfig({
   ],
   server: {
     proxy: {
-      '/localstack': {
-        target: process.env.VITE_LOCALSTACK_HOST || 'http://localhost:4566',
+      '/api': {
+        target: 'http://127.0.0.1:4566/restapis',
         changeOrigin: true,
-        rewrite: (path) => path.replace(/^\/localstack/, ''),
+        rewrite: (path) => {
+          const apiId = process.env.VITE_API_ID || 'ecommerce123'
+          return path.replace(/^\/api/, `/${apiId}/prod/_user_request_`)
+        },
       },
     },
   },

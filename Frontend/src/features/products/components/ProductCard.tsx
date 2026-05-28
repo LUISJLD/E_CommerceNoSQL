@@ -13,9 +13,10 @@ interface ProductCardProps {
   product: Product;
   onAddToCart: (product: Product) => Promise<void>;
   inCart?: boolean;
+  hideAction?: boolean;
 }
 
-export default function ProductCard({ product, onAddToCart, inCart = false }: ProductCardProps) {
+export default function ProductCard({ product, onAddToCart, inCart = false, hideAction = false }: ProductCardProps) {
   const [loading, setLoading] = useState(false);
   const [imgError, setImgError] = useState(false);
 
@@ -81,7 +82,7 @@ export default function ProductCard({ product, onAddToCart, inCart = false }: Pr
       </div>
 
       {/* Botón */}
-      {product.stock === 0 ? (
+      {hideAction ? null : product.stock === 0 ? (
         <button
           disabled
           className="w-full bg-gray-100 text-gray-400 py-2 rounded-xl text-sm font-medium cursor-not-allowed"

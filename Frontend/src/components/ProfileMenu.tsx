@@ -11,11 +11,11 @@ export default function ProfileMenu() {
   return (
     <div className="relative">
       <button
+        className="w-8 h-8 rounded-full border border-gray-400 flex items-center justify-center cursor-pointer hover:bg-gray-100"
         onClick={() => setOpen(!open)}
-        className="w-8 h-8 rounded-full bg-teal-600 text-white text-xs font-bold flex items-center justify-center cursor-pointer hover:bg-teal-700 transition-colors"
         aria-label="Perfil"
       >
-        {user.name.charAt(0).toUpperCase()}
+        <i className="bi bi-person-circle text-lg text-gray-600"></i>
       </button>
 
       {open && (
@@ -26,8 +26,8 @@ export default function ProfileMenu() {
           </p>
 
           {isAdmin && (
-            <Link
-              to="/admin"
+            <Link 
+              to="/admin" 
               className="text-indigo-600 text-xs font-semibold hover:underline flex items-center gap-2 py-1"
               onClick={() => setOpen(false)}
             >

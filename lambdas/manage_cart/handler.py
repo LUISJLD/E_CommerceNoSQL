@@ -1,134 +1,117 @@
 import os
 import json
-import boto3
-from boto3.dynamodb.conditions import Key
+import logging
+from decimal import Decimal
+
+from shared.dynamo_client import get_table
 from shared.cache_client import cache_aside, get_redis
+from shared.responses import response, no_content
+from boto3.dynamodb.conditions import Key
 
-# Configuración dinámica de endpoints para LocalStack / Docker
-endpoint_url = os.environ.get(
-    "DYNAMODB_ENDPOINT_URL",
-    "http://localhost:4566"
-)
-if os.environ.get("LOCALSTACK_HOSTNAME"):
-    endpoint_url = f"http://{os.environ.get('LOCALSTACK_HOSTNAME')}:4566"
+logging.getLogger().setLevel(logging.INFO)
 
-dynamodb = boto3.resource('dynamodb', endpoint_url=endpoint_url)
-table = dynamodb.Table(os.environ.get("TABLE_NAME", "Ecommerce"))
-redis_client = get_redis()
+CART_TTL = int(os.environ.get("CART_TTL_SECONDS", "300"))
 
-def lambda_handler(event, context):
-    http_method = event.get("httpMethod", "")
-    path_parameters = event.get("pathParameters", {}) or {}
-    user_id = path_parameters.get("user_id")
 
-    if not user_id:
-        return {"statusCode": 400, "body": json.dumps({"error": "Missing user_id parameter"})}
+def _invalidate(user_id: str):
+    """Borra la entrada de cache del carrito. Nunca lanza excepción."""
+    try:
+        get_redis().delete(f"cart:{user_id}")
+    except Exception as e:
+        logging.warning("No se pudo invalidar cache de cart:%s: %s", user_id, e)
 
-    # Definimos la llave única para el Hash de Redis
-    redis_key = f"cart:{user_id}"
+
+def _handle_get(table, user_id):
+    cache_key = f"cart:{user_id}"
+
+    def _fetch():
+        resp = table.query(
+            KeyConditionExpression=Key("pk").eq(f"USER#{user_id}")
+            & Key("sk").begins_with("CART#")
+        )
+        items = resp.get("Items", [])
+        return [
+            {
+                "productId": it["sk"].replace("CART#", ""),
+                "qty": int(it.get("qty", 0)),
+                "price": float(it.get("price", 0)),
+            }
+            for it in items
+        ]
+
+    result = cache_aside(cache_key, _fetch, CART_TTL)
+    if not isinstance(result, dict) or "data" not in result:
+        result = {"source": "DATABASE", "data": result}
+    return response(200, result)
+
+
+def _handle_post(table, user_id, event):
+    try:
+        body = json.loads(event.get("body") or "{}")
+    except json.JSONDecodeError:
+        return response(400, {"error": "Cuerpo JSON inválido"})
+
+    product_id = body.get("productId")
+    qty = body.get("qty")
+    price = body.get("price")
+
+    if not product_id or qty is None or price is None:
+        return response(400, {"error": "Se requieren productId, qty y price"})
 
     try:
-        # ----------------- FLUJO GET (LECTURA CON CACHE-ASIDE) -----------------
+        qty_dec = int(qty)
+        price_dec = Decimal(str(price))
+    except (ValueError, TypeError):
+        return response(400, {"error": "qty debe ser entero y price numérico"})
+
+    table.update_item(
+        Key={"pk": f"USER#{user_id}", "sk": f"CART#{product_id}"},
+        UpdateExpression="SET qty = if_not_exists(qty, :zero) + :inc, price = :price",
+        ExpressionAttributeValues={
+            ":inc": qty_dec,
+            ":zero": 0,
+            ":price": price_dec,
+        },
+    )
+
+    _invalidate(user_id)
+    return response(200, {"message": "Producto agregado al carrito", "productId": product_id})
+
+
+def _handle_delete(table, user_id, event):
+    query_params = event.get("queryStringParameters") or {}
+    product_id = query_params.get("productId")
+    if not product_id:
+        product_id = (event.get("pathParameters") or {}).get("product_id")
+    if not product_id:
+        return response(400, {"error": "Falta el parámetro productId"})
+
+    table.delete_item(Key={"pk": f"USER#{user_id}", "sk": f"CART#{product_id}"})
+
+    _invalidate(user_id)
+    return no_content()
+
+
+def lambda_handler(event, context):
+    try:
+        http_method = event.get("httpMethod", "")
+        path_params = event.get("pathParameters") or {}
+        user_id = path_params.get("user_id")
+
+        if not user_id:
+            return response(400, {"error": "Falta el parámetro user_id"})
+
+        table = get_table()
+
         if http_method == "GET":
-            def fetch_from_dynamodb():
-                response = table.query(
-                    KeyConditionExpression=Key("pk").eq(f"USER#{user_id}") &
-                    Key("sk").begins_with("CART#")
-                )
-                items = response.get("Items", [])
-                # Limpiamos los prefijos de base de datos antes de responder
-                return [
-                    {
-                        "productId": item["sk"].replace("CART#", ""),
-                        "qty": int(item["qty"]),
-                        "price": float(item["price"])
-                    } for item in items
-                ]
-            
-            # Usamos el helper de tu archivo anterior (TTL por defecto desde env o 300s)
-            ttl = int(os.environ.get("CART_TTL_SECONDS", 300))
-            cart_data = cache_aside(redis_key, fetch_from_dynamodb, ttl=ttl)
-            
-            # cache_aside retorna {source, data}, extraer solo los datos
-            data = cart_data.get('data', []) if isinstance(cart_data, dict) else cart_data
-            
-            return {
-                "statusCode": 200,
-                "headers": {
-                    "Access-Control-Allow-Origin": "*",
-                    "Content-Type": "application/json",
-                    "Access-Control-Expose-Headers": "X-Cache-Source",
-                    "X-Cache-Source": cart_data.get("source", "UNKNOWN") if isinstance(cart_data, dict) else "UNKNOWN",
-                },
-                "body": json.dumps(data)
-            }
-
-        # ----------------- FLUJO POST (AGREGAR/ACTUALIZAR PRODUCTO) -----------------
+            return _handle_get(table, user_id)
         elif http_method == "POST":
-            body = json.loads(event.get("body", "{}") or "{}")
-            product_id = body.get("productId")
-            qty = body.get("qty")
-            price = body.get("price")
-
-            if not all([product_id, qty is not None, price is not None]):
-                return {"statusCode": 400, "body": json.dumps({"error": "Invalid JSON body structure"})}
-
-            # Incrementar qty si el producto ya existe, o insertar con qty inicial
-            table.update_item(
-                Key={
-                    "pk": f"USER#{user_id}",
-                    "sk": f"CART#{product_id}",
-                },
-                UpdateExpression="SET qty = if_not_exists(qty, :zero) + :inc, price = :price",
-                ExpressionAttributeValues={
-                    ":inc":   int(qty),
-                    ":zero":  0,
-                    ":price": price,
-                },
-            )
-
-            # Invalidar caché para que el próximo GET lea DynamoDB
-            try:
-                redis_client.delete(redis_key)
-            except Exception:
-                pass
-
-            return {
-                "statusCode": 200,
-                "headers": {"Access-Control-Allow-Origin": "*", "Content-Type": "application/json"},
-                "body": json.dumps({"message": "Product added to cart successfully"})
-            }
-
-        # ----------------- FLUJO DELETE (ELIMINAR PRODUCTO) -----------------
+            return _handle_post(table, user_id, event)
         elif http_method == "DELETE":
-            query_params = event.get("queryStringParameters", {}) or {}
-            product_id = query_params.get("productId")
-
-            if not product_id:
-                return {"statusCode": 400, "body": json.dumps({"error": "Missing productId query parameter"})}
-
-            # Eliminar de DynamoDB
-            table.delete_item(Key={
-                "pk": f"USER#{user_id}",
-                "sk": f"CART#{product_id}"
-            })
-
-            # Invalidación de la caché en Redis
-            try:
-                redis_client.delete(redis_key)
-            except Exception as ex:
-                pass
-
-            return {
-                "statusCode": 200,
-                "headers": {"Access-Control-Allow-Origin": "*", "Content-Type": "application/json"},
-                "body": json.dumps({"message": "Product removed from cart successfully"})}
-
+            return _handle_delete(table, user_id, event)
         else:
-            return {"statusCode": 405, "body": json.dumps({"error": "Method not allowed"})}
+            return response(405, {"error": "Método no permitido"})
 
     except Exception as e:
-        return {
-            "statusCode": 500,
-            "body": json.dumps({"error": f"Internal server error (DynamoDB): {str(e)}"})
-        }
+        logging.exception("Error en manage_cart")
+        return response(500, {"error": f"Internal server error: {str(e)}"})

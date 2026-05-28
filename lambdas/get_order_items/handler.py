@@ -1,37 +1,45 @@
-import json, sys, os
- sys.path.insert(0, os.path.dirname(__file__))
+"""
+get_order_items
+───────────────
+GET /orders/{order_id}/items  →  líneas de producto de una orden.
+
+Consulta los ítems pk=ORDER#<id>, sk=ITEM#*.
+"""
+import os
+import logging
 
 from shared.dynamo_client import get_table
 from shared.cache_client import cache_aside
+from shared.responses import response
 from boto3.dynamodb.conditions import Key
 
-TTL = int(os.environ.get('CACHE_TTL_SECONDS', '60'))
+logging.getLogger().setLevel(logging.INFO)
+
+TTL = int(os.environ.get("CACHE_TTL_SECONDS", "60"))
+
 
 def lambda_handler(event, context):
-    order_id = event.get('pathParameters', {}).get('order_id')
-    if not order_id:
-        return {
-            "statusCode": 400,
-            "body": json.dumps({"error": "order_id requerido"})
-        }
+    try:
+        path_params = event.get("pathParameters") or {}
+        order_id = path_params.get("order_id")
+        if not order_id:
+            return response(400, {"error": "order_id requerido"})
 
-    table = get_table()
-    cache_key = f'order:items:{order_id}'
+        table = get_table()
+        cache_key = f"order:items:{order_id}"
 
-    def _fetch():
-        response = table.query(
-            KeyConditionExpression=Key('pk').eq(f'ORDER#{order_id}') &
-                                   Key('sk').begins_with('ITEM#')
-        )
-        return response.get('Items', [])
+        def _fetch():
+            resp = table.query(
+                KeyConditionExpression=Key("pk").eq(f"ORDER#{order_id}")
+                & Key("sk").begins_with("ITEM#")
+            )
+            return resp.get("Items", [])
 
-    items = cache_aside(cache_key, _fetch, TTL)
+        result = cache_aside(cache_key, _fetch, TTL)
+        data = result.get("data", []) if isinstance(result, dict) else result
 
-    # cache_aside retorna {source, data}, extraer solo los datos
-    data = items.get('data', []) if isinstance(items, dict) else items
+        return response(200, data)
 
-    return {
-        "statusCode": 200,
-        "headers": {"Content-Type": "application/json", "Access-Control-Allow-Origin": "*"},
-        "body": json.dumps(data, default=str)
-    }
+    except Exception as e:
+        logging.exception("Error en get_order_items")
+        return response(500, {"error": f"Internal server error: {str(e)}"})

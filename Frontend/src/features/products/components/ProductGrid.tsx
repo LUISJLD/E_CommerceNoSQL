@@ -1,4 +1,5 @@
 import type { Product } from "../../../shared/types";
+import { useAuth } from "../../../contexts/AuthContext";
 import { useCart } from "../../../contexts/CartContext";
 import ProductCard from "./ProductCard";
 
@@ -16,6 +17,8 @@ export default function ProductGrid({
   responseTime = 0,
 }: ProductGridProps) {
   const { addItem, items } = useCart();
+  const { isAdmin } = useAuth();
+
   const cartProductIds = new Set(items.map((i) => i.product.id));
 
   const badgeClass =
@@ -64,6 +67,7 @@ export default function ProductGrid({
             product={product}
             onAddToCart={addItem}
             inCart={cartProductIds.has(product.id)}
+            hideAction={isAdmin}
           />
         ))}
       </div>

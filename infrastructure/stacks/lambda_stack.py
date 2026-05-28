@@ -1,46 +1,9 @@
-import os
-import shutil
-import subprocess
-
-import jsii
-import aws_cdk as cdk
-from aws_cdk import Stack, Duration, CfnOutput, BundlingOptions
+from aws_cdk import Stack, Duration, CfnOutput, RemovalPolicy
 from aws_cdk import aws_lambda as _lambda
 from aws_cdk import aws_apigateway as apigw
 from aws_cdk import aws_dynamodb as dynamodb
+from aws_cdk import aws_s3 as s3
 from constructs import Construct
-
-
-@jsii.implements(cdk.ILocalBundling)
-class _LocalBundler:
-    """
-    Bundla una Lambda localmente (pip + copia) sin Docker.
-    JSII llama try_bundle() primero; si retorna True, omite Docker.
-    """
-
-    def __init__(self, handler_dir: str, lambdas_root: str):
-        self.handler_dir = handler_dir
-        self.lambdas_root = lambdas_root
-
-    def try_bundle(self, output_dir: str, options: cdk.BundlingOptions) -> bool:
-        subprocess.run(
-            ["pip3", "install", "boto3", "redis", "-t", output_dir, "-q"],
-            check=True,
-        )
-        handler_src = os.path.join(self.lambdas_root, self.handler_dir)
-        for item in os.listdir(handler_src):
-            src = os.path.join(handler_src, item)
-            dst = os.path.join(output_dir, item)
-            if os.path.isfile(src):
-                shutil.copy2(src, dst)
-            else:
-                shutil.copytree(src, dst, dirs_exist_ok=True)
-        shutil.copytree(
-            os.path.join(self.lambdas_root, "shared"),
-            os.path.join(output_dir, "shared"),
-            dirs_exist_ok=True,
-        )
-        return True
 
 
 class LambdaStack(Stack):
@@ -51,9 +14,17 @@ class LambdaStack(Stack):
                  **kwargs):
         super().__init__(scope, id, **kwargs)
 
-        # Ruta absoluta a /lambdas (funciona tanto en local como dentro del contenedor)
-        lambdas_root = os.path.normpath(
-            os.path.join(os.path.dirname(__file__), "..", "..", "lambdas")
+        # ─── BUCKET S3 PARA IMÁGENES DE PRODUCTOS ───
+        product_images_bucket = s3.Bucket(
+            self, "ProductImagesBucket",
+            bucket_name="ecommerce-product-images-local",
+            removal_policy=RemovalPolicy.DESTROY,
+
+            cors=[s3.CorsRule(
+                allowed_methods=[s3.HttpMethods.GET, s3.HttpMethods.PUT, s3.HttpMethods.POST],
+                allowed_origins=["*"],
+                allowed_headers=["*"]
+            )]
         )
 
         shared_env = {
@@ -63,81 +34,107 @@ class LambdaStack(Stack):
             "CACHE_TTL_SECONDS": "60",
             "CART_TTL_SECONDS": "300",
             "APP_REGION": "us-east-1",
+            "JWT_SECRET": "mi_super_secreto_local_123",
+            "IMAGES_BUCKET_NAME": product_images_bucket.bucket_name,
         }
+
+        # Código base unificado para todas las Lambdas
+        common_code = _lambda.Code.from_asset(
+            "../lambdas",
+            bundling={
+                "image": _lambda.Runtime.PYTHON_3_12.bundling_image,
+                "command": [
+                    "bash", "-c",
+                    "pip install redis PyJWT -t /asset-output && cp -r /asset-input/* /asset-output/"
+                ],
+            }
+        )
 
         def make_lambda(name: str, handler_dir: str) -> _lambda.Function:
             fn = _lambda.Function(
                 self, name,
                 runtime=_lambda.Runtime.PYTHON_3_12,
-                handler="handler.lambda_handler",
+                handler=f"{handler_dir}.handler.lambda_handler",
                 function_name=f"EcommerceLambda-{name}",
-                code=_lambda.Code.from_asset(
-                    os.path.join(lambdas_root, handler_dir),
-                    bundling=BundlingOptions(
-                        # local=... se intenta primero; si try_bundle() → True, no usa Docker
-                        local=_LocalBundler(handler_dir, lambdas_root),
-                        image=_lambda.Runtime.PYTHON_3_12.bundling_image,
-                        command=[
-                            "bash", "-c",
-                            f"pip install boto3 redis -t /asset-output && "
-                            f"cp -r /asset-input/* /asset-output/ && "
-                            f"cp -r {os.path.join(lambdas_root, 'shared')} /asset-output/",
-                        ],
-                    ),
-                ),
+                code=common_code,
                 environment=shared_env,
                 timeout=Duration.seconds(10),
             )
-            dynamo_table.grant_read_data(fn)
+            dynamo_table.grant_read_write_data(fn)
             return fn
 
-        fn_users       = make_lambda("GetAllUsers",    "get_all_users")
-        fn_profile     = make_lambda("GetUserProfile", "get_user_profile")
+        # Instanciación de las Lambdas
+        fn_auth        = make_lambda("Auth",           "auth")
         fn_orders      = make_lambda("GetUserOrders",  "get_user_orders")
-        fn_order_by_id = make_lambda("GetOrderById",   "get_order_by_id")
         fn_order_items = make_lambda("GetOrderItems",  "get_order_items")
         fn_products    = make_lambda("GetAllProducts", "get_products")
         fn_cart        = make_lambda("ManageUserCart", "manage_cart")
-        dynamo_table.grant_read_write_data(fn_cart)
+        fn_create_order = make_lambda("CreateOrder",   "create_order")
 
-        fn_manage_products = make_lambda("ManageProducts", "manage_products")
-        dynamo_table.grant_read_write_data(fn_manage_products)
+        # Lambdas de Admin
+        fn_admin_products = make_lambda("AdminProducts", "manage_products")
+        fn_admin_orders   = make_lambda("AdminOrders",   "manage_orders")
 
+        # Permisos S3 para que el admin pueda generar presigned URLs o subir
+        product_images_bucket.grant_read_write(fn_admin_products)
+
+        # Configuración del API Gateway Central
         api = apigw.RestApi(self, "EcommerceApi",
-                            rest_api_name="ecommerce-serverless",
-                            default_cors_preflight_options=apigw.CorsOptions(
-                                allow_origins=apigw.Cors.ALL_ORIGINS,
-                                allow_methods=apigw.Cors.ALL_METHODS,
-                            ))
+            rest_api_name="ecommerce-serverless",
+            deploy_options=apigw.StageOptions(stage_name="prod"),
+            default_cors_preflight_options=apigw.CorsOptions(
+                allow_origins=apigw.Cors.ALL_ORIGINS,
+                allow_methods=apigw.Cors.ALL_METHODS,
+                allow_headers=["Content-Type", "Authorization"]
+            )
+        )
 
-        # /cart/{user_id}
-        cart_user = api.root.add_resource("cart").add_resource("{user_id}")
-        cart_user.add_method("GET",    apigw.LambdaIntegration(fn_cart))
-        cart_user.add_method("POST",   apigw.LambdaIntegration(fn_cart))
+        from aws_cdk import Tags
+        Tags.of(api).add("_custom_id_", "ecommerce123")
+
+        # ─── RUTAS DEL API ───
+
+        # Auth
+        auth = api.root.add_resource("auth")
+        auth.add_resource("login").add_method("POST", apigw.LambdaIntegration(fn_auth))
+        auth.add_resource("register").add_method("POST", apigw.LambdaIntegration(fn_auth))
+
+        # Admin
+        admin = api.root.add_resource("admin")
+        admin_products = admin.add_resource("products")
+        admin_products.add_method("POST", apigw.LambdaIntegration(fn_admin_products))
+        admin_product = admin_products.add_resource("{id}")
+        admin_product.add_method("PUT", apigw.LambdaIntegration(fn_admin_products))
+        admin_product.add_method("DELETE", apigw.LambdaIntegration(fn_admin_products))
+
+        admin_orders = admin.add_resource("orders")
+        admin_orders.add_method("GET", apigw.LambdaIntegration(fn_admin_orders))
+        admin_order = admin_orders.add_resource("{id}")
+        admin_order.add_resource("status").add_method("PUT", apigw.LambdaIntegration(fn_admin_orders))
+
+        # Carrito
+        cart_root = api.root.add_resource("cart")
+        cart_user = cart_root.add_resource("{user_id}")
+        cart_user.add_method("GET", apigw.LambdaIntegration(fn_cart))
+        cart_user.add_method("POST", apigw.LambdaIntegration(fn_cart))
         cart_user.add_method("DELETE", apigw.LambdaIntegration(fn_cart))
 
-        # /products  y  /products/{product_id}
+        # Productos
         products = api.root.add_resource("products")
-        products.add_method("GET",  apigw.LambdaIntegration(fn_products))
-        products.add_method("POST", apigw.LambdaIntegration(fn_manage_products))
-        product_item = products.add_resource("{product_id}")
-        product_item.add_method("DELETE", apigw.LambdaIntegration(fn_manage_products))
+        products.add_method("GET", apigw.LambdaIntegration(fn_products))
 
-        # /users  y  /users/{user_id}
-        users = api.root.add_resource("users")
-        users.add_method("GET", apigw.LambdaIntegration(fn_users))
-        users.add_resource("{user_id}").add_method("GET", apigw.LambdaIntegration(fn_profile))
+        # Usuarios
+        user_resource = api.root.add_resource("user")
+        user = user_resource.add_resource("{user_id}")
+        user.add_resource("orders").add_method("GET", apigw.LambdaIntegration(fn_orders))
 
-        # /user/{user_id}/profile  y  /user/{user_id}/orders
-        user = api.root.add_resource("user").add_resource("{user_id}")
-        user.add_resource("profile").add_method("GET", apigw.LambdaIntegration(fn_profile))
-        user.add_resource("orders").add_method("GET",  apigw.LambdaIntegration(fn_orders))
-
-        # /orders/{order_id}  y  /orders/{order_id}/items
-        order = api.root.add_resource("orders").add_resource("{order_id}")
-        order.add_method("GET", apigw.LambdaIntegration(fn_order_by_id))
+        # Órdenes
+        orders = api.root.add_resource("orders")
+        orders.add_method("POST", apigw.LambdaIntegration(fn_create_order))
+        order = orders.add_resource("{order_id}")
         order.add_resource("items").add_method("GET", apigw.LambdaIntegration(fn_order_items))
 
+        # Output del API Gateway
         CfnOutput(self, "ApiGatewayUrl",
             value=f"http://localhost:4566/restapis/{api.rest_api_id}/prod/_user_request_",
             description="URL base del API Gateway en LocalStack",

@@ -24,6 +24,27 @@ export interface OrdersResult {
 }
 
 /**
+ * POST /orders
+ * Crea una nueva orden a partir del carrito guardado en Redis.
+ */
+export async function createOrder(userId: string): Promise<{ orderId: string, total: number }> {
+  const res = await fetch(`${API_URL}/orders`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ userId }),
+  });
+  
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error || `Error ${res.status} al crear orden`);
+  }
+
+  return res.json();
+}
+
+/**
  * GET /user/{userId}/orders
  */
 export async function fetchUserOrders(userId: string): Promise<OrdersResult> {
