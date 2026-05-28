@@ -1,4 +1,5 @@
 import type { Product } from "../../../shared/types";
+import { useAuth } from "../../../contexts/AuthContext";
 import { useCart } from "../../../contexts/CartContext";
 import ProductCard from "./ProductCard";
 
@@ -9,6 +10,7 @@ interface ProductGridProps {
 
 export default function ProductGrid({ products, loading }: ProductGridProps) {
   const { addItem, items } = useCart();
+  const { isAdmin } = useAuth();
 
   // Set de IDs que ya están en el carrito para feedback visual inmediato
   const cartProductIds = new Set(items.map((i) => i.product.id));
@@ -34,6 +36,7 @@ export default function ProductGrid({ products, loading }: ProductGridProps) {
             product={product}
             onAddToCart={addItem}
             inCart={cartProductIds.has(product.id)}
+            hideAction={isAdmin}
           />
         ))}
       </div>
