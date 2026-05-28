@@ -176,9 +176,7 @@ def create_lambdas(role_arn: str) -> dict[str, str]:
         handler_path = LAMBDAS / handler_dir
         marker = handler_path / "_deps_installed"
         if not marker.exists():
-            deps = ["redis"]
-            if handler_dir == "auth":
-                deps.append("PyJWT")
+            deps = ["redis", "PyJWT"]
             subprocess.run(
                 [sys.executable, "-m", "pip", "install", *deps,
                  "-t", str(handler_path), "-q"],
