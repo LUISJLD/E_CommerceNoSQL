@@ -373,7 +373,7 @@ def create_api_gateway(arns: dict[str, str]) -> str:
     _add_options(apigw, api_id, admin_prod_id)
     _add_options(apigw, api_id, admin_orders)
     _add_options(apigw, api_id, admin_status)
-    M(admin_products, "GET",    "EcommerceLambda-ManageProducts")
+    M(admin_products, "GET",    "EcommerceLambda-GetAllProducts")
     M(admin_products, "POST",   "EcommerceLambda-ManageProducts")
     M(admin_prod_id,  "PUT",    "EcommerceLambda-ManageProducts")
     M(admin_prod_id,  "DELETE", "EcommerceLambda-ManageProducts")

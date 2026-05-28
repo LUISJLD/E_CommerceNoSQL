@@ -124,14 +124,14 @@ def seed_users_and_orders():
                 'address': user['address'],
             })
 
-        table.put_item(Item={
-            'pk': f'ORDER#{o_id}',
-            'sk': f'ITEM#PROD_{i}',
-            'product': 'Teléfono Inteligente X100',
-            'qty': 1,
-            'unitPrice': Decimal('850000'),
-            'subtotal': Decimal('850000'),
-        })
+            table.put_item(Item={
+                'pk': f'ORDER#{o_id}',
+                'sk': f'ITEM#PROD_{i}',
+                'product': 'Teléfono Inteligente X100',
+                'qty': 1,
+                'unitPrice': Decimal('850000'),
+                'subtotal': Decimal('850000'),
+            })
 
     print(f"   ✅ {len(users)} usuarios y órdenes insertados")
 

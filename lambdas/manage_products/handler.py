@@ -49,7 +49,10 @@ def _handle_post(table, body):
     if body.get("action") == "get_upload_url":
         file_name = body.get("fileName", "image.jpg")
         file_type = body.get("fileType", "image/jpeg")
-        upload_url, public_url = _generate_upload_url(file_name, file_type)
+        result = _generate_upload_url(file_name, file_type)
+        if result is None:
+            return response(500, {"error": "Image bucket not configured"})
+        upload_url, public_url = result
         return response(200, {
             "uploadUrl": upload_url,
             "publicUrl": public_url
@@ -128,7 +131,7 @@ def lambda_handler(event, context):
         http_method = event.get("httpMethod", "")
         body = json.loads(event.get("body") or "{}")
         path_params = event.get("pathParameters") or {}
-        prod_id = path_params.get("id")
+        prod_id = path_params.get("product_id")
 
         table = get_table()
 
