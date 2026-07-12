@@ -17,13 +17,21 @@ CORS_HEADERS = {
 }
 
 
-def response(status_code: int, body):
+def response(status_code: int, body, extra_headers: dict | None = None):
     """Respuesta con body JSON. `default=str` serializa Decimal y datetime."""
+    headers = {**CORS_HEADERS, **(extra_headers or {})}
     return {
         "statusCode": status_code,
-        "headers": CORS_HEADERS,
+        "headers": headers,
         "body": json.dumps(body, default=str),
     }
+
+
+def cached_response(status_code: int, cache_result: dict):
+    """Respuesta con header X-Cache-Source a partir del resultado de cache_aside."""
+    source = cache_result.get("source", "DATABASE")
+    data = cache_result.get("data", cache_result)
+    return response(status_code, data, {"X-Cache-Source": source})
 
 
 def no_content():

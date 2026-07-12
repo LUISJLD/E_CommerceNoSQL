@@ -2,6 +2,7 @@ import os
 import json
 import logging
 from decimal import Decimal
+from urllib.parse import unquote
 
 from shared.dynamo_client import get_table
 from shared.cache_client import cache_aside, get_redis
@@ -42,7 +43,7 @@ def _handle_get(table, user_id):
     result = cache_aside(cache_key, _fetch, CART_TTL)
     if not isinstance(result, dict) or "data" not in result:
         result = {"source": "DATABASE", "data": result}
-    return response(200, result)
+    return response(200, result, {"X-Cache-Source": result.get("source", "DATABASE")})
 
 
 def _handle_post(table, user_id, event):
@@ -96,7 +97,7 @@ def lambda_handler(event, context):
     try:
         http_method = event.get("httpMethod", "")
         path_params = event.get("pathParameters") or {}
-        user_id = path_params.get("user_id")
+        user_id = unquote(path_params.get("user_id") or "")
 
         if not user_id:
             return response(400, {"error": "Falta el parámetro user_id"})

@@ -46,11 +46,10 @@ function ShopApp() {
 }
 
 function OrdersApp() {
-  const { allProducts } = useProducts();
   const { user } = useAuth();
 
   return (
-    <CartProvider userId={user?.email || "guest"} catalog={allProducts}>
+    <CartProvider userId={user?.email || "guest"} catalog={[]}>
       <MainLayout
         searchQuery=""
         onSearchChange={() => {}}

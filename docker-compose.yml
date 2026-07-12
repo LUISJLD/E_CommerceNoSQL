@@ -20,9 +20,9 @@ services:
       - DEFAULT_REGION=us-east-1
       - AWS_DEFAULT_REGION=us-east-1
       - LAMBDA_DOCKER_NETWORK=e_commercenosql_default
-      - LAMBDA_RUNTIME_ENVIRONMENT_TIMEOUT=60
+      - LAMBDA_RUNTIME_ENVIRONMENT_TIMEOUT=180
       - DEBUG=0
-      - LAMBDA_REMOVE_CONTAINERS=0
+      - LAMBDA_REMOVE_CONTAINERS=1
       - AWS_ACCESS_KEY_ID=test
       - AWS_SECRET_ACCESS_KEY=test
       - DYNAMODB_ENDPOINT_URL=http://localstack:4566

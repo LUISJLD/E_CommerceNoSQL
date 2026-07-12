@@ -65,7 +65,7 @@ def lambda_handler(event, context):
         http_method = event.get("httpMethod", "")
         body = json.loads(event.get("body") or "{}")
         path_params = event.get("pathParameters") or {}
-        order_id = path_params.get("order_id")
+        order_id = path_params.get("order_id") or path_params.get("id")
         
         table = get_table()
 

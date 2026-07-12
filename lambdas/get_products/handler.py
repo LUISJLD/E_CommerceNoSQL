@@ -12,7 +12,7 @@ import unicodedata
 
 from shared.dynamo_client import get_table
 from shared.cache_client import cache_aside
-from shared.responses import response
+from shared.responses import cached_response, response
 from boto3.dynamodb.conditions import Key
 
 logging.getLogger().setLevel(logging.INFO)

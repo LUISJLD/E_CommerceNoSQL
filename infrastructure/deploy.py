@@ -166,10 +166,7 @@ def _prepare_lambda_dir(handler_dir: str) -> None:
         for item in deps_dir.iterdir():
             dst = handler_path / item.name
             if dst.exists():
-                if dst.is_dir():
-                    shutil.rmtree(dst)
-                else:
-                    dst.unlink()
+                continue
             if item.is_dir():
                 shutil.copytree(item, dst)
             else:

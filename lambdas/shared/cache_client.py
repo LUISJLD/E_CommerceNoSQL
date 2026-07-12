@@ -14,6 +14,8 @@ def get_redis():
             _redis = redis.from_url(
                 os.environ.get("REDIS_URL", "redis://localhost:6379/1"),
                 decode_responses=True,
+                socket_connect_timeout=2,
+                socket_timeout=2,
             )
             _redis.ping()
         except Exception as e:

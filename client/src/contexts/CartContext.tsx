@@ -116,7 +116,7 @@ export function CartProvider({
     try {
       const start = performance.now();
       const token = localStorage.getItem('ecommerce_token');
-      const response = await fetch(`${API_URL}/cart/${userId}`, {
+      const response = await fetch(`${API_URL}/cart/${encodeURIComponent(userId)}`, {
         headers: {
           ...(token && { Authorization: `Bearer ${token}` }),
         },
@@ -171,7 +171,7 @@ export function CartProvider({
     dispatch({ type: "ADD_ITEM", payload: product });
     try {
       const token = localStorage.getItem('ecommerce_token');
-      const response = await fetch(`${API_URL}/cart/${userId}`, {
+      const response = await fetch(`${API_URL}/cart/${encodeURIComponent(userId)}`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -197,7 +197,7 @@ export function CartProvider({
     try {
       const token = localStorage.getItem('ecommerce_token');
       const response = await fetch(
-        `${API_URL}/cart/${userId}?productId=${productId}`,
+        `${API_URL}/cart/${encodeURIComponent(userId)}?productId=${encodeURIComponent(productId)}`,
         {
           method: "DELETE",
           headers: {

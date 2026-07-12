@@ -2,6 +2,27 @@
 const API_URL =
   import.meta.env.VITE_API_URL || "/api";
 
+const REQUEST_TIMEOUT_MS = 15_000;
+
+async function fetchWithTimeout(
+  url: string,
+  options: RequestInit = {},
+  timeoutMs = REQUEST_TIMEOUT_MS,
+): Promise<Response> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    return await fetch(url, { ...options, signal: controller.signal });
+  } catch (err) {
+    if (err instanceof DOMException && err.name === "AbortError") {
+      throw new Error("La solicitud tardó demasiado. Verifica que el backend esté activo.");
+    }
+    throw err;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 export interface Order {
   pk?: string;
   orderId: string;
@@ -30,7 +51,7 @@ export interface OrdersResult {
  */
 export async function createOrder(userId: string): Promise<{ orderId: string, total: number }> {
   const token = localStorage.getItem('ecommerce_token');
-  const res = await fetch(`${API_URL}/orders`, {
+  const res = await fetchWithTimeout(`${API_URL}/orders`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -53,7 +74,7 @@ export async function createOrder(userId: string): Promise<{ orderId: string, to
 export async function fetchUserOrders(userId: string): Promise<OrdersResult> {
   const start = performance.now();
   const token = localStorage.getItem('ecommerce_token');
-  const res = await fetch(`${API_URL}/user/${userId}/orders`, {
+  const res = await fetchWithTimeout(`${API_URL}/user/${encodeURIComponent(userId)}/orders`, {
     headers: {
       ...(token && { Authorization: `Bearer ${token}` }),
     },
@@ -87,7 +108,7 @@ export async function fetchUserOrders(userId: string): Promise<OrdersResult> {
  */
 export async function fetchOrderItems(orderId: string): Promise<OrderItem[]> {
   const token = localStorage.getItem('ecommerce_token');
-  const res = await fetch(`${API_URL}/orders/${orderId}/items`, {
+  const res = await fetchWithTimeout(`${API_URL}/orders/${encodeURIComponent(orderId)}/items`, {
     headers: {
       ...(token && { Authorization: `Bearer ${token}` }),
     },
