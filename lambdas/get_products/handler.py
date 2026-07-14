@@ -62,9 +62,7 @@ def lambda_handler(event, context):
             return items
 
         result = cache_aside(cache_key, _fetch, TTL)
-        data = result.get("data", []) if isinstance(result, dict) else result
-
-        return response(200, data)
+        return cached_response(200, result)
 
     except Exception as e:
         logging.exception("Error en get_products")

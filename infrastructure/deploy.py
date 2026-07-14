@@ -221,7 +221,7 @@ def create_lambdas(role_arn: str) -> dict[str, str]:
                 Handler="handler.lambda_handler",
                 Code={"S3Bucket": "hot-reload", "S3Key": hot_reload_path},
                 Environment={"Variables": shared_env},
-                Timeout=30,
+                Timeout=60,
             )
             print(f"  ✔ {fn_name} → hot-reload ({hot_reload_path})")
         except Exception as e:

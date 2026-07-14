@@ -21,6 +21,7 @@ services:
       - AWS_DEFAULT_REGION=us-east-1
       - LAMBDA_DOCKER_NETWORK=e_commercenosql_default
       - LAMBDA_RUNTIME_ENVIRONMENT_TIMEOUT=180
+      - LAMBDA_KEEPALIVE_MS=30000
       - DEBUG=0
       - LAMBDA_REMOVE_CONTAINERS=1
       - AWS_ACCESS_KEY_ID=test
@@ -51,6 +52,8 @@ services:
     container_name: ecocart_frontend
     ports:
       - "5173:5173"
+    environment:
+      - VITE_API_TARGET=http://localstack:4566
     volumes:
       - ./client:/app
       - /app/node_modules
