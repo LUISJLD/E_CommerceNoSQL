@@ -1,26 +1,33 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useCart } from "../../../contexts/CartContext";
-import CartDrawer from "./CartDrawer";
 
 export default function CartButton() {
-  const { totalItems } = useCart();
-  const [open, setOpen] = useState(false);
+  const { totalItems, setIsCartOpen } = useCart();
+  const [bump, setBump] = useState(false);
+
+  useEffect(() => {
+    if (totalItems === 0) return;
+    setBump(true);
+    const timer = setTimeout(() => setBump(false), 300);
+    return () => clearTimeout(timer);
+  }, [totalItems]);
 
   return (
-    <>
-      <button
-        className="flex items-center gap-1.5 relative text-gray-800 cursor-pointer"
-        onClick={() => setOpen(true)}
-      >
-        <i className="bi bi-cart-fill text-base"></i>
-        <span className="text-sm font-medium">Carrito</span>
-        {totalItems > 0 && (
-          <span className="absolute -top-2 left-2 bg-red-600 text-white text-[9px] w-4 h-4 rounded-full flex items-center justify-center font-bold">
-            {totalItems}
-          </span>
-        )}
-      </button>
-      {open && <CartDrawer onClose={() => setOpen(false)} />}
-    </>
+    <button
+      className="flex items-center gap-1.5 relative text-slate-300 hover:text-white cursor-pointer select-none"
+      onClick={() => setIsCartOpen(true)}
+    >
+      <i className={`bi bi-cart-fill text-base transition-all duration-300 ${
+        bump ? "-translate-y-0.5 scale-110 text-indigo-400" : ""
+      }`}></i>
+      <span className="text-sm font-semibold">Carrito</span>
+      {totalItems > 0 && (
+        <span className={`absolute -top-2 left-2 bg-gradient-to-r from-indigo-500 to-blue-500 text-white text-[9px] w-4.5 h-4.5 rounded-full flex items-center justify-center font-bold shadow-md shadow-indigo-500/20 transition-all duration-300 ${
+          bump ? "scale-125 shadow-indigo-400/40" : "scale-100"
+        }`}>
+          {totalItems}
+        </span>
+      )}
+    </button>
   );
 }

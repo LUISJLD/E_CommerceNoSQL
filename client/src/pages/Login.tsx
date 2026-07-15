@@ -4,15 +4,21 @@ import { useAuth } from "../contexts/AuthContext";
 import { authService } from "../services/auth.service";
 
 export default function Login() {
-  const [isLogin, setIsLogin] = useState(true);
+  const navigate = useNavigate();
+  const { login } = useAuth();
+  
+  const searchParams = new URLSearchParams(window.location.search);
+  const mode = searchParams.get("mode");
+  const redirect = searchParams.get("redirect");
+  const q = searchParams.get("q");
+  const cat = searchParams.get("cat");
+
+  const [isLogin, setIsLogin] = useState(mode !== "signup");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
-
-  const { login } = useAuth();
-  const navigate = useNavigate();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -27,14 +33,20 @@ export default function Login() {
         if (data.user.role === 'admin') {
           navigate("/admin");
         } else {
-          navigate("/");
+          if (redirect === "checkout") {
+            navigate("/shop?redirect=checkout");
+          } else if (redirect === "shop") {
+            navigate(`/shop?q=${q ? encodeURIComponent(q) : ""}&cat=${cat ? encodeURIComponent(cat) : ""}`);
+          } else {
+            navigate("/shop");
+          }
         }
       } else {
         await authService.register(name, email, password);
         // Despues de registrarse, iniciar sesion automaticamente
         const data = await authService.login(email, password);
         login(data.token, data.user);
-        navigate("/");
+        navigate("/shop");
       }
     } catch (err: any) {
       setError(err.message || "Ocurrió un error. Verifica tus datos.");
@@ -44,68 +56,80 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
-      <div className="sm:mx-auto sm:w-full sm:max-w-md">
-        <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
+    <div className="relative min-h-screen bg-slate-950 text-slate-100 flex flex-col justify-center py-12 sm:px-6 lg:px-8 font-sans overflow-x-hidden">
+      {/* Background Glowing Blobs */}
+      <div className="pointer-events-none fixed inset-0 -z-10">
+        <div className="absolute -top-40 left-1/4 h-96 w-96 rounded-full bg-indigo-600/20 blur-3xl" />
+        <div className="absolute top-1/3 -right-40 h-96 w-96 rounded-full bg-blue-500/10 blur-3xl" />
+        <div className="absolute bottom-0 left-1/3 h-80 w-80 rounded-full bg-cyan-500/10 blur-3xl" />
+      </div>
+
+      <div className="sm:mx-auto sm:w-full sm:max-w-md z-10 px-4">
+        <div className="flex justify-center mb-6">
+          <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-br from-indigo-500 to-blue-500 text-lg font-bold text-white shadow-lg shadow-indigo-500/30">
+            N
+          </div>
+        </div>
+        <h2 className="text-center text-3xl font-extrabold text-white">
           {isLogin ? "Inicia sesión en tu cuenta" : "Crea una cuenta nueva"}
         </h2>
-        <p className="mt-2 text-center text-sm text-gray-600">
+        <p className="mt-2 text-center text-sm text-slate-400">
           O{" "}
           <button
             onClick={() => setIsLogin(!isLogin)}
-            className="font-medium text-indigo-600 hover:text-indigo-500 cursor-pointer"
+            className="font-medium text-indigo-400 hover:text-indigo-300 cursor-pointer bg-transparent border-0"
           >
             {isLogin ? "regístrate si no tienes una" : "inicia sesión si ya tienes cuenta"}
           </button>
         </p>
       </div>
 
-      <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
-        <div className="bg-white py-8 px-4 shadow sm:rounded-lg sm:px-10">
+      <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md z-10 px-4">
+        <div className="bg-white/5 border border-white/10 py-8 px-4 shadow-xl backdrop-blur-xl sm:rounded-2xl sm:px-10">
           <form className="space-y-6" onSubmit={handleSubmit}>
             {!isLogin && (
               <div>
-                <label className="block text-sm font-medium text-gray-700">Nombre completo</label>
-                <div className="mt-1">
+                <label className="block text-sm font-medium text-slate-300">Nombre completo</label>
+                <div className="mt-1.5">
                   <input
                     type="text"
                     required
                     value={name}
                     onChange={(e) => setName(e.target.value)}
-                    className="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                    className="appearance-none block w-full px-3 py-2 bg-white/5 border border-white/10 rounded-xl text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400 sm:text-sm"
                   />
                 </div>
               </div>
             )}
 
             <div>
-              <label className="block text-sm font-medium text-gray-700">Correo electrónico</label>
-              <div className="mt-1">
+              <label className="block text-sm font-medium text-slate-300">Correo electrónico</label>
+              <div className="mt-1.5">
                 <input
                   type="email"
                   required
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                  className="appearance-none block w-full px-3 py-2 bg-white/5 border border-white/10 rounded-xl text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400 sm:text-sm"
                 />
               </div>
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700">Contraseña</label>
-              <div className="mt-1">
+              <label className="block text-sm font-medium text-slate-300">Contraseña</label>
+              <div className="mt-1.5">
                 <input
                   type="password"
                   required
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                  className="appearance-none block w-full px-3 py-2 bg-white/5 border border-white/10 rounded-xl text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400 sm:text-sm"
                 />
               </div>
             </div>
 
             {error && (
-              <div className="text-sm text-red-600 bg-red-50 p-2 rounded border border-red-100">
+              <div className="text-xs text-rose-400 bg-rose-500/10 p-3 rounded-xl border border-rose-500/20">
                 {error}
               </div>
             )}
@@ -114,14 +138,14 @@ export default function Login() {
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50"
+                className="w-full flex justify-center py-2.5 px-4 border border-transparent rounded-full shadow-md text-sm font-semibold text-white bg-gradient-to-r from-indigo-500 to-blue-500 hover:shadow-indigo-500/20 hover:-translate-y-0.5 active:translate-y-0 disabled:opacity-50 transition-all cursor-pointer"
               >
                 {loading ? "Cargando..." : isLogin ? "Iniciar Sesión" : "Registrarse"}
               </button>
             </div>
             
             {isLogin && (
-              <div className="mt-4 text-xs text-center text-gray-500 p-3 bg-gray-50 rounded">
+              <div className="mt-4 text-[11px] text-slate-400 p-4 bg-white/5 border border-white/10 rounded-xl space-y-1">
                 <p><strong>Admin por defecto:</strong> admin@ecommerce.com / admin123</p>
                 <p><strong>Usuario por defecto:</strong> jgarcia@gmail.com / user123</p>
               </div>

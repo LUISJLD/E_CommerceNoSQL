@@ -17,16 +17,22 @@ export function useProducts() {
     const start = performance.now();
     fetch(`${API_URL}/products`)
       .then(async (res) => {
+        if (!res.ok) throw new Error(`Error ${res.status}`);
+        const json = await res.json();
         const elapsed = Math.round(performance.now() - start);
-        const source = res.headers.get("X-Cache-Source");
+        setResponseTime(elapsed);
+
+        const source = json?.source;
         setCacheSource(
           source === "CACHE" ? "CACHE" : source === "DATABASE" ? "DATABASE" : "UNKNOWN"
         );
-        setResponseTime(elapsed);
 
-        if (!res.ok) throw new Error(`Error ${res.status}`);
-        const json = await res.json();
-        const items: Record<string, unknown>[] = Array.isArray(json) ? json : [];
+        const items: Record<string, unknown>[] = Array.isArray(json)
+          ? json
+          : Array.isArray(json?.data)
+          ? json.data
+          : [];
+
         return items.map((item) => ({
           id: item.productId as string,
           name: item.name as string,

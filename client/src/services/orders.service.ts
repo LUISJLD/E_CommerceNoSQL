@@ -2,7 +2,7 @@
 const API_URL =
   import.meta.env.VITE_API_URL || "/api";
 
-const REQUEST_TIMEOUT_MS = 15_000;
+const REQUEST_TIMEOUT_MS = 90_000;
 
 async function fetchWithTimeout(
   url: string,
@@ -82,12 +82,17 @@ export async function fetchUserOrders(userId: string): Promise<OrdersResult> {
   const elapsed = Math.round(performance.now() - start);
   if (!res.ok) throw new Error(`Error ${res.status} fetching orders`);
 
-  const src = res.headers.get("X-Cache-Source");
-  const cacheSource: "CACHE" | "DATABASE" | "UNKNOWN" =
-    src === "CACHE" ? "CACHE" : src === "DATABASE" ? "DATABASE" : "UNKNOWN";
-
   const json = await res.json();
-  const items: Record<string, unknown>[] = Array.isArray(json) ? json : [];
+  const cacheSource: "CACHE" | "DATABASE" | "UNKNOWN" =
+    json?.source === "CACHE" ? "CACHE"
+    : json?.source === "DATABASE" ? "DATABASE"
+    : "UNKNOWN";
+
+  const items: Record<string, unknown>[] = Array.isArray(json)
+    ? json
+    : Array.isArray(json?.data)
+    ? json.data
+    : [];
 
   return {
     orders: items.map((item) => ({
@@ -104,7 +109,7 @@ export async function fetchUserOrders(userId: string): Promise<OrdersResult> {
 
 /**
  * GET /orders/{orderId}/items
- * La Lambda retorna un array directo.
+ * La Lambda retorna un cached_response de la forma { source, data }.
  */
 export async function fetchOrderItems(orderId: string): Promise<OrderItem[]> {
   const token = localStorage.getItem('ecommerce_token');
@@ -116,7 +121,11 @@ export async function fetchOrderItems(orderId: string): Promise<OrderItem[]> {
   if (!res.ok) throw new Error(`Error ${res.status} fetching order items`);
 
   const json = await res.json();
-  const items: Record<string, unknown>[] = Array.isArray(json) ? json : [];
+  const items: Record<string, unknown>[] = Array.isArray(json)
+    ? json
+    : Array.isArray(json?.data)
+    ? json.data
+    : [];
 
   return items.map((item) => ({
     productId: (item.productId as string) ?? (item.sk as string)?.replace("ITEM#", "") ?? "",

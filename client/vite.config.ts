@@ -21,9 +21,12 @@ export default defineConfig({
   ],
   server: {
     host: '0.0.0.0',
+    watch: {
+      usePolling: true,
+    },
     proxy: {
       '/api': {
-        target: 'http://localstack:4566',
+        target: process.env.VITE_API_TARGET || 'http://localhost:4566',
         changeOrigin: true,
         rewrite: (path) => {
           const apiId = readApiId()

@@ -16,7 +16,13 @@ export async function fetchProducts(category?: string): Promise<Product[]> {
   }
 
   const json = await res.json();
-  const items: Record<string, unknown>[] = Array.isArray(json) ? json : [];
+  // La Lambda ahora retorna { source: "CACHE"|"DATABASE", data: [...] }
+  // Soportamos ambas formas por compatibilidad
+  const items: Record<string, unknown>[] = Array.isArray(json)
+    ? json
+    : Array.isArray(json?.data)
+    ? json.data
+    : [];
 
   return items.map((item) => ({
     id: item.productId as string,

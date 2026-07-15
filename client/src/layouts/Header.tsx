@@ -13,26 +13,26 @@ interface HeaderProps {
 export default function Header({ searchQuery, onSearchChange }: HeaderProps) {
   const location = useLocation();
   const { isAdmin } = useAuth();
-  const isShop = location.pathname === "/";
+  const isShop = location.pathname === "/shop";
   const isOrders = location.pathname === "/orders";
 
   return (
-    <header className="bg-white border-b border-gray-200 shadow-sm px-8 py-0">
+    <header className="sticky top-0 z-30 border-b border-white/5 bg-slate-950/80 backdrop-blur-xl">
       {/* Top bar */}
-      <div className="flex items-center gap-6 max-w-[1200px] mx-auto h-14">
+      <div className="mx-auto flex max-w-7xl items-center gap-6 px-4 py-3 sm:px-6">
         <Logo />
         <div className="flex-1 max-w-sm">
           <SearchInput value={searchQuery} onChange={onSearchChange} />
         </div>
 
         {/* Nav */}
-        <nav className="flex items-center gap-1 ml-4">
+        <nav className="flex items-center gap-2 ml-4">
           <Link
-            to="/"
-            className={`px-4 py-1.5 rounded-full text-sm font-medium transition-colors cursor-pointer ${
+            to="/shop"
+            className={`px-4 py-1.5 rounded-full text-sm font-semibold transition-all cursor-pointer ${
               isShop
-                ? "bg-teal-600 text-white"
-                : "text-gray-600 hover:bg-gray-100"
+                ? "bg-gradient-to-r from-indigo-500 to-blue-500 text-white shadow-md shadow-indigo-500/20"
+                : "text-slate-400 hover:text-white"
             }`}
           >
             Tienda
@@ -40,10 +40,10 @@ export default function Header({ searchQuery, onSearchChange }: HeaderProps) {
           {!isAdmin && (
             <Link
               to="/orders"
-              className={`px-4 py-1.5 rounded-full text-sm font-medium transition-colors cursor-pointer ${
+              className={`px-4 py-1.5 rounded-full text-sm font-semibold transition-all cursor-pointer ${
                 isOrders
-                  ? "bg-teal-600 text-white"
-                  : "text-gray-600 hover:bg-gray-100"
+                  ? "bg-gradient-to-r from-indigo-500 to-blue-500 text-white shadow-md shadow-indigo-500/20"
+                  : "text-slate-400 hover:text-white"
               }`}
             >
               Mis Pedidos
