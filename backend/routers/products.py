@@ -33,8 +33,8 @@ async def get_products(
     limit: int = Query(default=12, ge=1, le=100)
 ):
     db = get_db()
-
     query = {}
+
     if category:
         cat_norm = _normalize(category)
         cursor = db.products.find({}, {"_id": 0})
@@ -44,7 +44,6 @@ async def get_products(
             if _normalize(p.get("category", "")) == cat_norm
         ]
         total = len(products)
-        # Paginación manual en memoria para el filtro normalizado por Python
         start = (page - 1) * limit
         end = start + limit
         paginated_products = products[start:end]

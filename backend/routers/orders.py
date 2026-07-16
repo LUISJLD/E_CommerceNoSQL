@@ -13,6 +13,7 @@ from urllib.parse import unquote
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from config.database import get_db
+from config.cache import get_redis
 from core.dependencies import get_current_user, require_admin
 
 router = APIRouter(tags=["Orders"])
@@ -173,6 +174,11 @@ async def create_order(body: CreateOrderBody, _user=Depends(get_current_user)):
     # 5. Limpiar reservas y vaciar el carrito
     await db.inventory_holds.delete_many({"userId": user_id})
     await db.cart.update_one({"userId": user_id}, {"$set": {"items": []}})
+    try:
+        r = get_redis()
+        await r.delete(f"cart:{user_id}")
+    except Exception:
+        pass
 
     return {"message": "Orden creada con éxito", "orderId": order_id, "total": total}
 

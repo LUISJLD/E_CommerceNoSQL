@@ -4,11 +4,11 @@
 # DELETE /api/cart/{user_id}?productId=X  → eliminar item
 
 from urllib.parse import unquote
-from fastapi import APIRouter, HTTPException, Query
-from fastapi.responses import Response
+from fastapi import APIRouter, HTTPException, Query, Response
 from pydantic import BaseModel
 from typing import Optional
 from config.database import get_db
+from config.cache import cache_aside, get_redis
 
 router = APIRouter(prefix="/cart", tags=["Cart"])
 
@@ -19,15 +19,30 @@ class CartItemBody(BaseModel):
     price: float
 
 
+async def _invalidate(user_id: str):
+    try:
+        r = get_redis()
+        await r.delete(f"cart:{user_id}")
+    except Exception:
+        pass
+
+
 @router.get("/{user_id}")
-async def get_cart(user_id: str):
+async def get_cart(user_id: str, response: Response):
     db = get_db()
     user_id = unquote(user_id).lower()
+    cache_key = f"cart:{user_id}"
 
-    cart = await db.cart.find_one({"userId": user_id}, {"_id": 0})
-    items = cart.get("items", []) if cart else []
+    async def _fetch():
+        cart = await db.cart.find_one({"userId": user_id}, {"_id": 0})
+        return cart.get("items", []) if cart else []
 
-    return {"source": "DATABASE", "data": items}
+    result = await cache_aside(cache_key, _fetch, ttl=300)
+    source = result["source"]
+    data = result["data"]
+
+    response.headers["X-Cache-Source"] = source
+    return {"source": source, "data": data}
 
 
 @router.post("/{user_id}")
@@ -59,6 +74,7 @@ async def add_to_cart(user_id: str, body: CartItemBody):
             "items": [{"productId": body.productId, "qty": body.qty, "price": body.price}],
         })
 
+    await _invalidate(user_id)
     return {"message": "Producto agregado al carrito", "productId": body.productId}
 
 
@@ -78,4 +94,5 @@ async def remove_from_cart(
         {"$pull": {"items": {"productId": productId}}},
     )
 
+    await _invalidate(user_id)
     return Response(status_code=204)
