@@ -27,25 +27,42 @@ def _normalize(text: str) -> str:
 # ─── Público ────────────────────────────────────────────────────────────────
 
 @router.get("/products")
-async def get_products(category: Optional[str] = Query(default=None)):
+async def get_products(
+    category: Optional[str] = Query(default=None),
+    page: int = Query(default=1, ge=1),
+    limit: int = Query(default=12, ge=1, le=100)
+):
     db = get_db()
 
     query = {}
     if category:
-        # Búsqueda insensible a acentos usando regex simple
         cat_norm = _normalize(category)
-        # Traemos todos y filtramos en Python (igual que la Lambda)
         cursor = db.products.find({}, {"_id": 0})
         all_products = await cursor.to_list(length=None)
         products = [
             p for p in all_products
             if _normalize(p.get("category", "")) == cat_norm
         ]
+        total = len(products)
+        # Paginación manual en memoria para el filtro normalizado por Python
+        start = (page - 1) * limit
+        end = start + limit
+        paginated_products = products[start:end]
     else:
-        cursor = db.products.find({}, {"_id": 0})
-        products = await cursor.to_list(length=None)
+        total = await db.products.count_documents(query)
+        cursor = db.products.find(query, {"_id": 0}).skip((page - 1) * limit).limit(limit)
+        paginated_products = await cursor.to_list(length=None)
 
-    return {"source": "DATABASE", "data": products}
+    return {
+        "source": "DATABASE",
+        "data": paginated_products,
+        "pagination": {
+            "total": total,
+            "page": page,
+            "limit": limit,
+            "pages": (total + limit - 1) // limit
+        }
+    }
 
 
 # ─── Admin ───────────────────────────────────────────────────────────────────

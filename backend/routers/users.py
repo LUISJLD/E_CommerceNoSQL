@@ -27,3 +27,28 @@ async def get_user_profile(user_id: str, _user=Depends(get_current_user)):
     if not user:
         raise HTTPException(status_code=404, detail="Usuario no encontrado")
     return user
+
+
+from pydantic import BaseModel, Field
+
+class ProfileUpdate(BaseModel):
+    name: str = Field(..., min_length=2, max_length=50)
+    address: str = Field(..., max_length=150)
+
+
+@router.put("/profile")
+async def update_profile(body: ProfileUpdate, current_user = Depends(get_current_user)):
+    db = get_db()
+    email = current_user["email"].lower()
+
+    updated = await db.users.find_one_and_update(
+        {"email": email},
+        {"$set": {"name": body.name, "address": body.address}},
+        return_document=True,
+        projection={"_id": 0, "passwordHash": 0}
+    )
+
+    if not updated:
+        raise HTTPException(status_code=404, detail="Usuario no encontrado")
+
+    return {"message": "Perfil actualizado exitosamente", "user": updated}

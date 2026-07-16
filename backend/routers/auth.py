@@ -3,7 +3,7 @@
 # POST /api/auth/login
 
 from fastapi import APIRouter, HTTPException, status
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, Field
 from config.database import get_db
 from core.security import hash_password, create_token
 
@@ -12,8 +12,8 @@ router = APIRouter(prefix="/auth", tags=["Auth"])
 
 class RegisterBody(BaseModel):
     email: EmailStr
-    password: str
-    name: str = "Usuario"
+    password: str = Field(..., min_length=6, max_length=100)
+    name: str = Field("Usuario", min_length=2, max_length=50)
 
 
 class LoginBody(BaseModel):
@@ -35,6 +35,7 @@ async def register(body: RegisterBody):
         "name": body.name,
         "passwordHash": hash_password(body.password),
         "role": "user",
+        "address": "",
     })
 
     return {"message": "Usuario registrado exitosamente"}
