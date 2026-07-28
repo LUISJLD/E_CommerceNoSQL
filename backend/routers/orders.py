@@ -21,7 +21,7 @@ router = APIRouter(tags=["Orders"])
 
 class CreateOrderBody(BaseModel):
     userId: str
-    shippingAddress: str
+    shippingAddress: str = ""
 
 
 class UpdateStatusBody(BaseModel):
