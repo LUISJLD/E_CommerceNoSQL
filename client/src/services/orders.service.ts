@@ -41,7 +41,11 @@ export async function createOrder(userId: string, shippingAddress: string): Prom
   
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
-    throw new Error(err.detail || err.error || `Error ${res.status} al crear orden`);
+    let msg = err.detail || err.error || `Error ${res.status} al crear orden`;
+    if (Array.isArray(err.detail)) {
+      msg = err.detail.map((e: any) => `${e.loc ? e.loc[e.loc.length-1] : 'field'}: ${e.msg}`).join(", ");
+    }
+    throw new Error(msg);
   }
 
   return res.json();
@@ -64,7 +68,11 @@ export async function reserveInventory(userId: string): Promise<{ message: strin
   
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
-    throw new Error(err.detail || err.error || `Error ${res.status} reservando inventario`);
+    let msg = err.detail || err.error || `Error ${res.status} reservando inventario`;
+    if (Array.isArray(err.detail)) {
+      msg = err.detail.map((e: any) => `${e.loc ? e.loc[e.loc.length-1] : 'field'}: ${e.msg}`).join(", ");
+    }
+    throw new Error(msg);
   }
 
   return res.json();

@@ -2,7 +2,7 @@ import { Link } from "react-router-dom";
 
 export default function Footer() {
   return (
-    <footer className="bg-slate-50 text-slate-800 border-t border-slate-100 px-8 pt-16 pb-8 mt-auto font-sans">
+    <footer style={{ background: "#f9f7f4", borderTop: "1px solid #e8e2d8", color: "#1a1a1a" }} className="px-8 pt-16 pb-8 mt-auto">
       <div className="max-w-[1400px] mx-auto space-y-12">
         {/* Newsletter Section */}
         <div className="flex flex-col lg:flex-row items-center justify-between gap-6 pb-12 border-b border-slate-200">
@@ -30,10 +30,8 @@ export default function Footer() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 text-left">
           {/* Logo & Vibe */}
           <div className="space-y-4">
-            <Link to="/" className="flex items-center gap-1">
-              <span className="text-xl font-semibold tracking-tight text-slate-900">
-                NexusCart<span className="text-emerald-500 text-2xl leading-none">.</span>
-              </span>
+            <Link to="/" className="flex items-center gap-2">
+              <img src="/logo.png" alt="NexusCart" className="h-24 w-auto scale-110 origin-left opacity-90 drop-shadow-sm" />
             </Link>
             <p className="text-sm text-slate-500 font-medium leading-relaxed">
               Equipos de tecnología, prendas de streetwear y artículos de viaje premium seleccionados con los mejores estándares para complementar tu estilo de vida activo.

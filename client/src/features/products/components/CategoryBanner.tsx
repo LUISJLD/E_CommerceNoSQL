@@ -15,13 +15,13 @@ const BANNERS = [
     image: "/images/banner_electronica.jpg",
     title: "Innovación Tecnológica",
     subtitle: "Descubre nuestra selección premium de dispositivos.",
-    tag: "Tech"
+    tag: "Tecnología"
   },
   {
     image: "/images/hero_lifestyle.jpg",
     title: "Tu Espacio, Tu Santuario",
     subtitle: "Equipa tu vida con los mejores accesorios y comodidades.",
-    tag: "Lifestyle"
+    tag: "Estilo de Vida"
   },
   {
     image: "/images/banner_equipamiento.jpg",

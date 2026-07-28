@@ -2,18 +2,6 @@ import { useState } from "react";
 import type { Product } from "../../../shared/types";
 import { CURRENCY_FORMAT } from "../../../shared/constants";
 
-const PRODUCT_BADGES: Record<string, string[]> = {
-  "Electrónica": ["SMART", "5G", "NEW"],
-  "Ropa": ["TREND", "PREMIUM"],
-  "Deportes": ["OUTDOOR", "LIGHT"],
-};
-
-const CATEGORY_COLORS: Record<string, { badge: string, text: string }> = {
-  "Electrónica": { badge: "bg-emerald-50 text-emerald-600 border-emerald-100", text: "text-emerald-700" },
-  "Ropa": { badge: "bg-orange-50 text-orange-600 border-orange-100", text: "text-orange-700" },
-  "Deportes": { badge: "bg-sky-50 text-sky-600 border-sky-100", text: "text-sky-700" },
-};
-
 interface ProductCardProps {
   product: Product;
   onAddToCart: (product: Product) => Promise<void>;
@@ -31,15 +19,12 @@ export default function ProductCard({ product, onAddToCart, onClick, inCart = fa
     CURRENCY_FORMAT.options as Intl.NumberFormatOptions
   ).format(product.price);
 
-  const stockColor =
-    product.stock === 0
-      ? "text-rose-500"
-      : product.stock <= 5
-      ? "text-orange-500 font-medium"
-      : "text-slate-400";
+  const nameLen = product.name.length;
+  const ratingMock = 4.0 + ((nameLen * 3) % 11) / 10;
+  const reviewCountMock = 30 + ((nameLen * 7) % 220);
+  const fullStarsMock = Math.floor(ratingMock);
 
-  const styles = CATEGORY_COLORS[product.category] || { badge: "bg-slate-50 text-slate-600 border-slate-100", text: "text-slate-700" };
-  const badges = PRODUCT_BADGES[product.category] || ["NEW"];
+  const placeholderSrc = `https://placehold.co/300x300/f0fdf4/6ee7b7?text=${encodeURIComponent(product.name.charAt(0))}`;
 
   const handleClick = async (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -52,117 +37,141 @@ export default function ProductCard({ product, onAddToCart, onClick, inCart = fa
     }
   };
 
-  const placeholderSrc = `https://placehold.co/200x200/f8fafc/94a3b8?text=${encodeURIComponent(product.name.charAt(0))}`;
-
-  // Generate mock rating data dynamically based on name length & product id to make it consistent
-  const nameLen = product.name.length;
-  const ratingMock = 4.0 + ((nameLen * 3) % 11) / 10;
-  const reviewCountMock = 30 + ((nameLen * 7) % 220);
-  const fullStarsMock = Math.floor(ratingMock);
-  const starsMock = "★".repeat(fullStarsMock) + "☆".repeat(5 - fullStarsMock);
+  const isOutOfStock = product.stock === 0;
+  const isLowStock = product.stock > 0 && product.stock <= 5;
 
   return (
-    <article 
+    <article
       onClick={() => onClick && onClick(product)}
-      className="relative bg-slate-50 border border-slate-100 rounded-[32px] p-5 flex flex-col gap-4 hover:bg-white hover:border-emerald-100 hover:shadow-xl hover:-translate-y-1 transition-all duration-300 overflow-hidden group cursor-pointer"
+      className="group cursor-pointer flex flex-col bg-white rounded-2xl overflow-hidden transition-all duration-300"
+      style={{
+        border: "1px solid #e2e8f0",
+        boxShadow: "0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04)",
+      }}
+      onMouseEnter={e => {
+        (e.currentTarget as HTMLElement).style.transform = "translateY(-6px)";
+        (e.currentTarget as HTMLElement).style.boxShadow = "0 20px 40px rgba(0,0,0,0.10), 0 8px 16px rgba(16,185,129,0.08)";
+        (e.currentTarget as HTMLElement).style.borderColor = "#10b981";
+      }}
+      onMouseLeave={e => {
+        (e.currentTarget as HTMLElement).style.transform = "";
+        (e.currentTarget as HTMLElement).style.boxShadow = "0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04)";
+        (e.currentTarget as HTMLElement).style.borderColor = "#e2e8f0";
+      }}
     >
-      
-      {/* Contenedor de Imagen */}
-      <div className="w-full h-48 flex items-center justify-center bg-white rounded-2xl overflow-hidden mt-2 relative shadow-sm border border-slate-50/50">
-        {/* Pestaña superior flotante */}
-        <div className={`absolute top-3 left-3 text-[9px] font-bold uppercase tracking-wider px-3 py-1 rounded-full border ${styles.badge} shadow-sm z-10`}>
+      {/* Imagen con gradiente superior */}
+      <div
+        className="relative w-full flex items-center justify-center overflow-hidden"
+        style={{
+          height: "210px",
+          background: "linear-gradient(145deg, #f0fdf4 0%, #f8fafc 60%, #ecfdf5 100%)",
+        }}
+      >
+        {/* Categoría — badge limpio */}
+        <span className="absolute top-3 left-3 z-10 text-[9px] font-bold uppercase tracking-[0.15em] px-2.5 py-1 rounded-lg bg-white/90 border border-slate-200 text-slate-500 backdrop-blur-sm shadow-sm">
           {product.category}
-        </div>
-        
+        </span>
+
+        {/* Stock bajo */}
+        {isLowStock && (
+          <span className="absolute top-3 right-3 z-10 text-[9px] font-bold uppercase tracking-[0.15em] px-2.5 py-1 rounded-lg bg-rose-500 text-white shadow-sm">
+            ¡Solo {product.stock}!
+          </span>
+        )}
+
+        {/* Hover overlay sutil */}
+        <div className="absolute inset-0 bg-emerald-500/0 group-hover:bg-emerald-500/5 transition-colors duration-300" />
+
         <img
           src={imgError || !product.image ? placeholderSrc : product.image}
           alt={product.name}
-          className="max-w-[85%] max-h-[85%] object-contain group-hover:scale-105 transition-transform duration-500"
+          className="max-w-[76%] max-h-[76%] object-contain transition-transform duration-500 group-hover:scale-110 drop-shadow-md"
           loading="lazy"
           onError={() => setImgError(true)}
         />
       </div>
 
-      {/* Badges técnicos */}
-      <div className="flex flex-wrap gap-1.5 mt-1">
-        {badges.map((badge, idx) => (
-          <span
-            key={idx}
-            className="text-[9px] font-semibold tracking-wider uppercase bg-white border border-slate-100 text-slate-500 px-2.5 py-0.5 rounded-full"
-          >
-            {badge}
-          </span>
-        ))}
-      </div>
-
-      {/* Información del Producto */}
-      <div className="flex-1 flex flex-col gap-1.5 text-left">
-        <h3 className="text-base font-semibold text-slate-800 leading-snug line-clamp-2">
+      {/* Contenido */}
+      <div className="flex flex-col flex-1 p-4 gap-3">
+        {/* Nombre */}
+        <h3 className="text-sm font-semibold text-slate-800 leading-[1.4] line-clamp-2 min-h-[40px]">
           {product.name}
         </h3>
 
-        {/* Rating con estrellas */}
-        <div className="flex items-center gap-1.5 text-[11px] text-slate-500 font-medium mt-0.5">
-          <span className="text-emerald-500 text-xs tracking-tighter">{starsMock}</span>
-          <span>{ratingMock.toFixed(1)}</span>
-          <span className="text-slate-300">·</span>
-          <span>{reviewCountMock} reseñas</span>
+        {/* Rating */}
+        <div className="flex items-center gap-1.5">
+          <div className="flex gap-0.5">
+            {Array.from({ length: 5 }).map((_, i) => (
+              <svg
+                key={i}
+                className={`w-3 h-3 ${i < fullStarsMock ? "text-emerald-500" : "text-slate-200"}`}
+                fill="currentColor"
+                viewBox="0 0 20 20"
+              >
+                <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+              </svg>
+            ))}
+          </div>
+          <span className="text-[11px] text-slate-400 font-medium">
+            {ratingMock.toFixed(1)}
+            <span className="mx-1 text-slate-200">·</span>
+            {reviewCountMock} reseñas
+          </span>
         </div>
 
-        <div className="mt-auto pt-3 flex items-end justify-between">
-          <p className="text-xl font-bold text-slate-900 tracking-tight">{formattedPrice}</p>
-          <p className={`text-[10px] ${stockColor} uppercase tracking-wider font-medium`}>
-            {product.stock === 0
-              ? "Agotado"
-              : product.stock <= 5
-              ? `¡Solo ${product.stock}!`
-              : `Stock: ${product.stock}`}
-          </p>
+        {/* Precio — altura fija para que todos los botones queden alineados */}
+        <div className="pt-3 min-h-[52px]" style={{ borderTop: "1px solid #f1f5f9" }}>
+          <div className="flex items-start justify-between">
+            <div>
+              <p className="text-lg font-bold text-slate-900 tracking-tight leading-none">
+                {formattedPrice}
+              </p>
+              {isLowStock && (
+                <p className="text-[10px] text-rose-500 font-semibold mt-1">Últimas unidades</p>
+              )}
+              {isOutOfStock && (
+                <p className="text-[10px] text-slate-400 font-semibold mt-1 uppercase tracking-wide">Agotado</p>
+              )}
+            </div>
+            {/* Indicador de carrito */}
+            {inCart && !isOutOfStock && (
+              <span className="text-[10px] font-bold bg-emerald-50 text-emerald-600 border border-emerald-200 px-2 py-1 rounded-lg">
+                ✓ En carrito
+              </span>
+            )}
+          </div>
         </div>
+
+        {/* Botón — siempre esmeralda */}
+        {!hideAction && (
+          isOutOfStock ? (
+            <button
+              disabled
+              className="w-full py-2.5 rounded-xl text-xs font-bold tracking-wider uppercase bg-slate-100 text-slate-400 cursor-not-allowed"
+            >
+              Agotado
+            </button>
+          ) : (
+            <button
+              onClick={handleClick}
+              disabled={loading}
+              className={`w-full py-2.5 rounded-xl text-xs font-bold tracking-wider uppercase transition-all duration-200 flex items-center justify-center gap-2 cursor-pointer disabled:opacity-60 active:scale-95 ${
+                inCart
+                  ? "bg-emerald-50 text-emerald-700 border-2 border-emerald-200 hover:bg-emerald-100"
+                  : "bg-emerald-600 text-white hover:bg-emerald-700"
+              }`}
+              style={!inCart ? { boxShadow: "0 4px 12px rgba(16,185,129,0.3)" } : {}}
+            >
+              {loading ? (
+                <svg className="animate-spin h-3.5 w-3.5" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                </svg>
+              ) : inCart ? "＋ Agregar otro" : "Añadir al carrito"}
+            </button>
+          )
+        )}
       </div>
-
-      {/* Botón de compra */}
-      {hideAction ? null : product.stock === 0 ? (
-        <button
-          disabled
-          className="w-full bg-slate-100 text-slate-400 py-3 rounded-full text-xs font-semibold tracking-widest uppercase cursor-not-allowed border border-slate-200"
-        >
-          Agotado
-        </button>
-      ) : inCart ? (
-        <button
-          onClick={handleClick}
-          disabled={loading}
-          className="w-full bg-emerald-50 text-emerald-600 border border-emerald-100 py-3 rounded-full text-xs font-semibold tracking-widest uppercase hover:bg-emerald-100 hover:-translate-y-0.5 active:scale-95 transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-60"
-        >
-          {loading ? (
-            <svg className="animate-spin h-4 w-4 text-emerald-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-            </svg>
-          ) : (
-            <span className="w-4 h-4 rounded-full bg-emerald-600 text-white flex items-center justify-center text-[10px] font-bold">+</span>
-          )}
-          {loading ? "Agregando..." : "Agregar otro"}
-        </button>
-      ) : (
-        <button
-          onClick={handleClick}
-          disabled={loading}
-          className="w-full bg-slate-900 text-white py-3 rounded-full text-xs font-semibold tracking-widest uppercase hover:bg-emerald-600 hover:shadow-lg hover:shadow-emerald-500/20 hover:-translate-y-0.5 active:scale-95 transition-all flex items-center justify-center gap-2 cursor-pointer"
-        >
-          {loading ? (
-            <svg className="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-            </svg>
-          ) : (
-            <>
-              Añadir al carrito
-            </>
-          )}
-        </button>
-      )}
     </article>
   );
 }

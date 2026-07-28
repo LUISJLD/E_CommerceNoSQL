@@ -21,6 +21,7 @@ export default function CartDrawer({ onClose }: CartDrawerProps) {
   const [address, setAddress] = useState("");
   const [savedAddresses, setSavedAddresses] = useState<string[]>([]);
   const [isLoadingAddresses, setIsLoadingAddresses] = useState(false);
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
 
   useEffect(() => {
     if (isAuthenticated && user) {
@@ -106,9 +107,9 @@ export default function CartDrawer({ onClose }: CartDrawerProps) {
 
   const cacheLabel =
     cacheSource === "CACHE"
-      ? "⚡ Redis Cache"
+      ? "Redis Cache"
       : cacheSource === "DATABASE"
-      ? "🍃 MongoDB Atlas"
+      ? "MongoDB Atlas"
       : null;
 
   return createPortal(
@@ -266,17 +267,40 @@ export default function CartDrawer({ onClose }: CartDrawerProps) {
                   {isLoadingAddresses ? (
                     <p className="text-xs text-slate-400 py-2">Cargando direcciones...</p>
                   ) : savedAddresses.length > 0 ? (
-                    <select
-                      id="cart-address"
-                      value={address}
-                      onChange={(e) => setAddress(e.target.value)}
-                      className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-800 outline-none focus:border-emerald-400 focus:ring-2 focus:ring-emerald-100 transition-all cursor-pointer"
-                    >
-                      <option value="" disabled>Selecciona una dirección</option>
-                      {savedAddresses.map((addr, idx) => (
-                        <option key={idx} value={addr}>{addr.substring(0, 50)}{addr.length > 50 ? '...' : ''}</option>
-                      ))}
-                    </select>
+                    <div className="relative">
+                      <button
+                        type="button"
+                        onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+                        className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-800 text-left outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all flex items-center justify-between cursor-pointer"
+                      >
+                        <span className="truncate pr-4">{address || "Selecciona una dirección"}</span>
+                        <svg className={`w-4 h-4 text-slate-400 transition-transform ${isDropdownOpen ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
+                      </button>
+                      
+                      {isDropdownOpen && (
+                        <>
+                          <div className="fixed inset-0 z-10" onClick={() => setIsDropdownOpen(false)}></div>
+                          <div className="absolute z-20 w-full mt-2 bg-white border border-slate-100 rounded-xl shadow-lg shadow-slate-200/50 overflow-hidden animate-fade-in origin-top">
+                            <ul className="max-h-48 overflow-y-auto p-1.5 space-y-1">
+                              {savedAddresses.map((addr, idx) => (
+                                <li key={idx}>
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setAddress(addr);
+                                      setIsDropdownOpen(false);
+                                    }}
+                                    className={`w-full text-left px-3 py-2.5 text-sm rounded-lg transition-colors cursor-pointer ${address === addr ? 'bg-emerald-50 text-emerald-700 font-semibold' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'}`}
+                                  >
+                                    <div className="line-clamp-2">{addr}</div>
+                                  </button>
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                        </>
+                      )}
+                    </div>
                   ) : (
                     <p className="text-xs text-amber-600 bg-amber-50 p-3 rounded-xl border border-amber-200 font-medium">
                       Debes agregar una dirección en tu perfil antes de comprar.

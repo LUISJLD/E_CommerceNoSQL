@@ -25,14 +25,12 @@ export default function Header({ searchQuery, onSearchChange }: HeaderProps) {
   };
 
   return (
-    <header className="bg-white/80 backdrop-blur-md border-b border-slate-100 sticky top-0 z-40 px-8 py-0 shadow-sm transition-all">
+    <header style={{ background: "rgba(249,247,244,0.9)", borderBottom: "1px solid #e8e2d8", backdropFilter: "blur(12px)", position: "sticky", top: 0, zIndex: 40 }} className="px-8 py-0 shadow-sm transition-all">
       <div className="relative flex items-center justify-between max-w-[1400px] mx-auto h-20">
         {/* Left: Logo */}
         <div className="flex-1 flex items-center">
           <Link to="/" onClick={handleInicioClick} className="flex items-center gap-2">
-            <span className="text-xl font-semibold tracking-tight text-slate-800">
-              NexusCart<span className="text-emerald-500 text-2xl leading-none">.</span>
-            </span>
+            <img src="/logo.png" alt="NexusCart" className="h-20 w-auto scale-125 origin-left drop-shadow-sm" />
           </Link>
           
           {/* Nav Links (Tienda + Orders) */}
