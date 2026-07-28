@@ -21,7 +21,7 @@ export default function MainLayout({
         searchQuery={searchQuery}
         onSearchChange={onSearchChange}
       />
-      <main className="flex flex-1 max-w-[1200px] mx-auto w-full px-8 py-6 gap-6">
+      <main className="flex-1 w-full">
         {children}
       </main>
       <Footer />

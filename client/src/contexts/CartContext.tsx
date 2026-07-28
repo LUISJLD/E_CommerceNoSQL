@@ -217,17 +217,21 @@ export function CartProvider({
 
   const clear = useCallback(() => dispatch({ type: "CLEAR" }), []);
 
-  const checkout = useCallback(async (_address: string): Promise<boolean> => {
+  const checkout = useCallback(async (address: string): Promise<boolean> => {
     try {
-      // Importación dinámica para evitar problemas de ciclo o usar el servicio de forma limpia
-      const { createOrder } = await import("../services/orders.service");
-      await createOrder(userId);
+      const { reserveInventory, createOrder } = await import("../services/orders.service");
+      
+      // 1. Reservar stock temporalmente
+      await reserveInventory(userId);
+      
+      // 2. Crear orden con la dirección de envío
+      await createOrder(userId, address);
       clear();
       await refreshCart();
       return true;
     } catch (err) {
       console.error("[Cart] Checkout error:", err);
-      return false;
+      throw err; // Relanzar el error para que la UI lo atrape y muestre
     }
   }, [userId, clear, refreshCart]);
 

@@ -3,7 +3,6 @@ import { fetchUserOrders, fetchOrderItems } from "../../../services/orders.servi
 import type { Order, OrderItem } from "../../../services/orders.service";
 import { CURRENCY_FORMAT } from "../../../shared/constants";
 
-// Estado y estilos de pedidos
 const STATUS_STYLES: Record<string, { label: string; classes: string }> = {
   DELIVERED:  { label: "Entregado",  classes: "bg-green-100 text-green-700" },
   SHIPPED:    { label: "Enviado",    classes: "bg-blue-100 text-blue-700" },
@@ -11,6 +10,17 @@ const STATUS_STYLES: Record<string, { label: string; classes: string }> = {
   CANCELLED:  { label: "Cancelado",  classes: "bg-red-100 text-red-600" },
   PENDING:    { label: "Pendiente",  classes: "bg-gray-100 text-gray-600" },
 };
+
+export function normalizeStatus(status: string) {
+  if (!status) return "PENDING";
+  const s = status.toUpperCase();
+  if (s === "ENTREGADO") return "DELIVERED";
+  if (s === "ENVIADO") return "SHIPPED";
+  if (s === "PROCESANDO") return "PROCESSING";
+  if (s === "CANCELADO") return "CANCELLED";
+  if (s === "PENDIENTE") return "PENDING";
+  return s;
+}
 
 function formatPrice(value: number) {
   return new Intl.NumberFormat(
@@ -33,12 +43,13 @@ function formatDate(iso: string) {
 }
 
 function StatusBadge({ status }: { status: string }) {
-  const style = STATUS_STYLES[status.toUpperCase()] ?? {
+  const norm = normalizeStatus(status);
+  const style = STATUS_STYLES[norm] ?? {
     label: status,
     classes: "bg-gray-100 text-gray-600",
   };
   return (
-    <span className={`text-xs font-medium px-2.5 py-0.5 rounded-full ${style.classes}`}>
+    <span className={`text-[9px] font-black uppercase px-2.5 py-0.5 rounded ${style.classes}`}>
       {style.label}
     </span>
   );
@@ -46,14 +57,14 @@ function StatusBadge({ status }: { status: string }) {
 
 function OrderItemRow({ item }: { item: OrderItem }) {
   return (
-    <div className="flex justify-between items-center py-2 border-b border-gray-100 last:border-0">
+    <div className="flex justify-between items-center py-2.5 border-b border-slate-50 last:border-0 text-left">
       <div>
-        <p className="text-sm font-medium text-gray-800">{item.name}</p>
-        <p className="text-xs text-gray-400">
+        <p className="text-xs font-bold text-slate-800 uppercase tracking-tight">{item.name}</p>
+        <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider mt-0.5">
           {item.qty} × {formatPrice(item.price)}
         </p>
       </div>
-      <p className="text-sm font-semibold text-gray-900">
+      <p className="text-xs font-black text-slate-900">
         {formatPrice(item.price * item.qty)}
       </p>
     </div>
@@ -85,52 +96,50 @@ function OrderCard({ order }: { order: Order }) {
   };
 
   return (
-    <div className="bg-white border border-gray-200 rounded-xl overflow-hidden hover:shadow-sm transition-shadow">
+    <div className="bg-white border border-slate-100 rounded-[28px] overflow-hidden hover:shadow-md transition-all">
       {/* Header de la orden */}
       <button
-        className="w-full flex items-center justify-between px-5 py-4 text-left cursor-pointer hover:bg-gray-50 transition-colors"
+        className="w-full flex items-center justify-between px-6 py-5 text-left cursor-pointer hover:bg-slate-50/50 transition-colors"
         onClick={handleToggle}
         aria-expanded={expanded}
       >
         <div className="flex items-center gap-4">
-          <div className="w-9 h-9 bg-teal-50 rounded-lg flex items-center justify-center shrink-0">
-            <i className="bi bi-box-seam text-teal-600 text-sm"></i>
+          <div className="w-10 h-10 bg-slate-100 rounded-xl flex items-center justify-center shrink-0">
+            <span className="text-slate-600 font-black text-xs">📦</span>
           </div>
           <div>
-            <p className="text-sm font-semibold text-gray-900">
+            <p className="text-xs font-black text-slate-900 uppercase tracking-tight">
               Pedido #{orderId.slice(-8).toUpperCase()}
             </p>
-            <p className="text-xs text-gray-400">{formatDate(order.createdAt)}</p>
+            <p className="text-[10px] text-slate-400 font-semibold uppercase mt-0.5">{formatDate(order.createdAt)}</p>
           </div>
         </div>
 
         <div className="flex items-center gap-4">
           <StatusBadge status={order.status} />
-          <p className="text-sm font-bold text-gray-900 min-w-[80px] text-right">
+          <p className="text-sm font-black text-slate-900 min-w-[80px] text-right tracking-tight">
             {formatPrice(order.total)}
           </p>
-          <i
-            className={`bi bi-chevron-down text-gray-400 text-xs transition-transform ${
-              expanded ? "rotate-180" : ""
-            }`}
-          ></i>
+          <span className={`text-[10px] font-black text-slate-400 transition-transform ${expanded ? 'rotate-180' : ''}`}>
+            ▼
+          </span>
         </div>
       </button>
 
       {/* Detalle expandible */}
       {expanded && (
-        <div className="px-5 pb-4 border-t border-gray-100">
-          <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mt-3 mb-2">
-            Productos
+        <div className="px-6 pb-5 border-t border-slate-50 bg-slate-50/30">
+          <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mt-4 mb-2 text-left">
+            Artículos Comprados
           </p>
           {loadingItems ? (
-            <p className="text-sm text-gray-400 py-2">Cargando...</p>
+            <p className="text-xs font-bold text-slate-400 py-2">Cargando...</p>
           ) : itemsError ? (
-            <p className="text-sm text-red-400 py-2">{itemsError}</p>
+            <p className="text-xs font-bold text-rose-500 py-2">{itemsError}</p>
           ) : items.length === 0 ? (
-            <p className="text-sm text-gray-400 py-2">Sin productos registrados.</p>
+            <p className="text-xs font-bold text-slate-400 py-2">Sin productos registrados.</p>
           ) : (
-            <div>
+            <div className="divide-y divide-slate-100">
               {items.map((item) => (
                 <OrderItemRow key={item.productId} item={item} />
               ))}
@@ -142,12 +151,13 @@ function OrderCard({ order }: { order: Order }) {
   );
 }
 
-export default function OrdersView({ userId }: { userId: string }) {
+export default function OrdersView({ userId, searchQuery = "" }: { userId: string, searchQuery?: string }) {
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [cacheSource, setCacheSource] = useState<"CACHE" | "DATABASE" | "UNKNOWN">("UNKNOWN");
   const [responseTime, setResponseTime] = useState(0);
+  const [statusFilter, setStatusFilter] = useState<string | null>(null);
 
   useEffect(() => {
     setLoading(true);
@@ -163,10 +173,13 @@ export default function OrdersView({ userId }: { userId: string }) {
 
   if (loading) {
     return (
-      <div className="flex-1 flex items-center justify-center py-20">
-        <div className="text-center">
-          <i className="bi bi-arrow-repeat text-3xl text-teal-500 animate-spin block mb-3"></i>
-          <p className="text-sm text-gray-400">Cargando pedidos...</p>
+      <div className="flex-1 flex items-center justify-center py-24">
+        <div className="text-center space-y-3">
+          <svg className="animate-spin h-6 w-6 text-slate-900 mx-auto" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+          </svg>
+          <span className="text-xs text-slate-400 uppercase tracking-widest font-black">Cargando Historial...</span>
         </div>
       </div>
     );
@@ -174,54 +187,100 @@ export default function OrdersView({ userId }: { userId: string }) {
 
   if (error) {
     return (
-      <div className="flex-1 flex items-center justify-center py-20">
-        <div className="text-center">
-          <i className="bi bi-exclamation-circle text-3xl text-red-400 block mb-3"></i>
-          <p className="text-sm text-red-500">{error}</p>
+      <div className="flex-1 flex items-center justify-center py-24">
+        <div className="text-center text-rose-500 font-bold text-xs uppercase tracking-widest">
+          Error: {error}
         </div>
       </div>
     );
   }
 
+  const filteredOrders = orders.filter((o) => {
+    // 1. Filter by status
+    if (statusFilter && normalizeStatus(o.status) !== statusFilter.toUpperCase()) {
+      return false;
+    }
+    // 2. Filter by search query
+    if (searchQuery.trim() !== "") {
+      const query = searchQuery.toLowerCase();
+      const orderId = (o.orderId || o.sk.replace("ORDER#", "")).toLowerCase();
+      // Si el query coincide con el ID de la orden
+      if (orderId.includes(query)) return true;
+      // Opcional: Podríamos buscar en los items si los tuviéramos cargados aquí,
+      // pero por ahora buscamos por ID.
+      return false;
+    }
+    return true;
+  });
+
   return (
-    <div className="flex-1">
+    <div className="flex-1 space-y-6">
       {/* Encabezado */}
-      <div className="flex items-center justify-between mb-5">
-        <div>
-          <h2 className="text-lg font-bold text-gray-900">Mis Pedidos</h2>
-          <p className="text-xs text-gray-400 mt-0.5">
-            {orders.length} {orders.length === 1 ? "pedido" : "pedidos"} encontrados
+      <div className="flex items-center justify-between">
+        <div className="text-left">
+          <h2 className="text-sm font-black tracking-widest uppercase text-slate-900">Mis Pedidos</h2>
+          <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider mt-1">
+            {orders.length} {orders.length === 1 ? "pedido encontrado" : "pedidos encontrados"}
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-3">
           {cacheSource !== "UNKNOWN" && (
-            <span className={`text-xs font-medium px-2 py-0.5 rounded-full border ${
+            <span className={`text-[9px] font-black uppercase px-2 py-0.5 rounded border ${
               cacheSource === "CACHE"
-                ? "bg-green-100 text-green-800 border-green-300"
-                : "bg-yellow-100 text-yellow-800 border-yellow-300"
+                ? "bg-green-100 text-green-800 border-green-200"
+                : "bg-yellow-100 text-yellow-800 border-yellow-200"
             }`}>
-              {cacheSource === "CACHE" ? "⚡ Redis Cache" : "🗄️ DynamoDB"}
+              {cacheSource === "CACHE" ? "Redis Cache" : "MongoDB Atlas"}
             </span>
           )}
           {responseTime > 0 && (
-            <span className="text-xs text-gray-400">{responseTime} ms</span>
+            <span className="text-[10px] font-bold text-slate-400">{responseTime} ms</span>
           )}
         </div>
       </div>
 
-      {orders.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-20 text-center">
-          <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">
-            <i className="bi bi-bag-x text-2xl text-gray-400"></i>
+      {/* Filtros de Estado */}
+      <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-none border-b border-slate-100">
+        <button
+          onClick={() => setStatusFilter(null)}
+          className={`px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-wider transition-all border cursor-pointer ${
+            statusFilter === null
+              ? "bg-slate-900 text-white border-slate-900 shadow-sm"
+              : "bg-white text-slate-500 border-slate-200 hover:border-slate-300 hover:text-slate-800"
+          }`}
+        >
+          Todos
+        </button>
+        {Object.entries(STATUS_STYLES).map(([key, style]) => (
+          <button
+            key={key}
+            onClick={() => setStatusFilter(key)}
+            className={`px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-wider transition-all border cursor-pointer ${
+              statusFilter === key
+                ? "bg-slate-900 text-white border-slate-900 shadow-sm"
+                : "bg-white text-slate-500 border-slate-200 hover:border-slate-300 hover:text-slate-800"
+            }`}
+          >
+            {style.label}
+          </button>
+        ))}
+      </div>
+
+      {filteredOrders.length === 0 ? (
+        <div className="flex flex-col items-center justify-center py-20 text-center bg-slate-50 rounded-[32px] border border-slate-100/50 p-6">
+          <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center mb-4 border border-slate-100 shadow-sm text-lg">
+            🛍️
           </div>
-          <p className="text-sm font-medium text-gray-600">No tienes pedidos aún</p>
-          <p className="text-xs text-gray-400 mt-1">
-            Cuando realices una compra, aparecerá aquí.
+          <p className="text-xs font-black text-slate-500 uppercase tracking-widest">
+            {statusFilter ? "No hay pedidos con este estado" : "No tienes pedidos aún"}
+          </p>
+          <p className="text-[10px] text-slate-400 font-semibold mt-1 uppercase tracking-wider">
+            {statusFilter ? "Intenta seleccionar otro estado de pedido." : "Cuando realices una compra, aparecerá registrada en esta sección."}
           </p>
         </div>
       ) : (
         <div className="space-y-3">
-          {orders.map((order) => (
+          {filteredOrders.map((order) => (
             <OrderCard key={order.sk || order.orderId} order={order} />
           ))}
         </div>

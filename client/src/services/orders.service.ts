@@ -28,9 +28,32 @@ export interface OrdersResult {
  * POST /orders
  * Crea una nueva orden a partir del carrito guardado en Redis.
  */
-export async function createOrder(userId: string): Promise<{ orderId: string, total: number }> {
+export async function createOrder(userId: string, shippingAddress: string): Promise<{ orderId: string, total: number }> {
   const token = localStorage.getItem('ecommerce_token');
   const res = await fetch(`${API_URL}/orders`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      ...(token && { Authorization: `Bearer ${token}` }),
+    },
+    body: JSON.stringify({ userId, shippingAddress }),
+  });
+  
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.detail || err.error || `Error ${res.status} al crear orden`);
+  }
+
+  return res.json();
+}
+
+/**
+ * POST /checkout/reserve
+ * Reserva de inventario temporal por 10 minutos.
+ */
+export async function reserveInventory(userId: string): Promise<{ message: string, expiresAt: string }> {
+  const token = localStorage.getItem('ecommerce_token');
+  const res = await fetch(`${API_URL}/checkout/reserve`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -41,7 +64,7 @@ export async function createOrder(userId: string): Promise<{ orderId: string, to
   
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
-    throw new Error(err.error || `Error ${res.status} al crear orden`);
+    throw new Error(err.detail || err.error || `Error ${res.status} reservando inventario`);
   }
 
   return res.json();
@@ -66,7 +89,7 @@ export async function fetchUserOrders(userId: string): Promise<OrdersResult> {
     src === "CACHE" ? "CACHE" : src === "DATABASE" ? "DATABASE" : "UNKNOWN";
 
   const json = await res.json();
-  const items: Record<string, unknown>[] = Array.isArray(json) ? json : [];
+  const items: Record<string, unknown>[] = Array.isArray(json) ? json : Array.isArray(json?.data) ? json.data : [];
 
   return {
     orders: items.map((item) => ({
@@ -95,7 +118,7 @@ export async function fetchOrderItems(orderId: string): Promise<OrderItem[]> {
   if (!res.ok) throw new Error(`Error ${res.status} fetching order items`);
 
   const json = await res.json();
-  const items: Record<string, unknown>[] = Array.isArray(json) ? json : [];
+  const items: Record<string, unknown>[] = Array.isArray(json) ? json : Array.isArray(json?.data) ? json.data : [];
 
   return items.map((item) => ({
     productId: (item.productId as string) ?? (item.sk as string)?.replace("ITEM#", "") ?? "",

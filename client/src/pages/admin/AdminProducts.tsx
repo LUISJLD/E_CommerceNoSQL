@@ -12,7 +12,6 @@ export default function AdminProducts() {
   
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const [searchParams] = useSearchParams();
   const searchTerm = searchParams.get("search")?.toLowerCase() || "";
 

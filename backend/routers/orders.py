@@ -21,6 +21,7 @@ router = APIRouter(tags=["Orders"])
 
 class CreateOrderBody(BaseModel):
     userId: str
+    shippingAddress: str
 
 
 class UpdateStatusBody(BaseModel):
@@ -163,6 +164,7 @@ async def create_order(body: CreateOrderBody, _user=Depends(get_current_user)):
     order = {
         "orderId": order_id,
         "userId": user_id,
+        "shippingAddress": body.shippingAddress,
         "items": items,
         "total": total,
         "status": "Pendiente",

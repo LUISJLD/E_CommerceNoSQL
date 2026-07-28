@@ -78,7 +78,7 @@ export const adminService = {
     });
     if (!res.ok) throw new Error("Error obteniendo órdenes");
     const json = await res.json();
-    return Array.isArray(json) ? json : [];
+    return Array.isArray(json) ? json : Array.isArray(json?.data) ? json.data : [];
   },
 
   async updateOrderStatus(id: string, status: string) {

@@ -9,7 +9,7 @@ export interface Product {
 
 export interface User {
   username: string;
-  address: string;
+  addresses: string[];
 }
 
 export interface CartItem {

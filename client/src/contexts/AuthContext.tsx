@@ -12,6 +12,7 @@ interface AuthContextType {
   token: string | null;
   login: (token: string, userData: User) => void;
   logout: () => void;
+  updateSession: (token?: string, userParams?: Partial<User>) => void;
   isAuthenticated: boolean;
   isAdmin: boolean;
   isLoading: boolean;
@@ -56,6 +57,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setUser(null);
   };
 
+  const updateSession = (newToken?: string, userParams?: Partial<User>) => {
+    if (newToken) {
+      localStorage.setItem('ecommerce_token', newToken);
+      setToken(newToken);
+    }
+    if (userParams) {
+      setUser((prev) => (prev ? { ...prev, ...userParams } : null));
+    }
+  };
+
   return (
     <AuthContext.Provider
       value={{
@@ -63,6 +74,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         token,
         login,
         logout,
+        updateSession,
         isAuthenticated: !!user,
         isAdmin: user?.role === 'admin',
         isLoading,

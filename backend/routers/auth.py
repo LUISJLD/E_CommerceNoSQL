@@ -35,7 +35,7 @@ async def register(body: RegisterBody):
         "name": body.name,
         "passwordHash": hash_password(body.password),
         "role": "user",
-        "address": "",
+        "addresses": [],
     })
 
     return {"message": "Usuario registrado exitosamente"}
