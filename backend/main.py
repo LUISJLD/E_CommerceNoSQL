@@ -12,9 +12,6 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from routers import auth, products, cart, orders, users
 
-# Motor (async MongoDB) conecta de forma lazy al primer query.
-# No se necesita lifespan en serverless — Vercel reutiliza el módulo
-# entre invocaciones cálidas, manteniendo la conexión viva.
 app = FastAPI(
     title="NexusCart API",
     version="2.0.0",
@@ -29,8 +26,10 @@ app.add_middleware(
     allow_origins=[
         "http://localhost:5173",
         "http://localhost:4173",
+        "https://e-commerce-no-sql-client.vercel.app",
         FRONTEND_URL,
     ],
+    allow_origin_regex=r"https://.*\.vercel\.app",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
