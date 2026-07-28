@@ -29,7 +29,7 @@ PRODUCTS = [
         "name": "Teléfono Inteligente X100",
         "price": 850000,
         "stock": 15,
-        "image": "https://placehold.co/200x200/e8f5e9/333?text=Phone",
+        "image": "https://placehold.co/200x200/e8f5e9/333?text=Teléfono",
         "category": "Electrónica",
     },
     {
@@ -37,7 +37,7 @@ PRODUCTS = [
         "name": "Portátil WorkPro 15",
         "price": 2200000,
         "stock": 8,
-        "image": "https://placehold.co/200x200/e3f2fd/333?text=Laptop",
+        "image": "https://placehold.co/200x200/e3f2fd/333?text=Portátil",
         "category": "Electrónica",
     },
     {
@@ -45,7 +45,7 @@ PRODUCTS = [
         "name": "Auriculares Bluetooth Z5",
         "price": 120000,
         "stock": 25,
-        "image": "https://placehold.co/200x200/f3e5f5/333?text=Headphones",
+        "image": "https://placehold.co/200x200/f3e5f5/333?text=Auriculares",
         "category": "Electrónica",
     },
     {
@@ -53,7 +53,7 @@ PRODUCTS = [
         "name": "Reloj Inteligente FitTrack",
         "price": 350000,
         "stock": 3,
-        "image": "https://placehold.co/200x200/fff3e0/333?text=Watch",
+        "image": "https://placehold.co/200x200/fff3e0/333?text=Reloj",
         "category": "Electrónica",
     },
     {
@@ -61,7 +61,7 @@ PRODUCTS = [
         "name": "Mochila de Viaje",
         "price": 90000,
         "stock": 50,
-        "image": "https://placehold.co/200x200/efebe9/333?text=Backpack",
+        "image": "https://placehold.co/200x200/efebe9/333?text=Mochila",
         "category": "Deportes",
     },
     {
@@ -69,7 +69,7 @@ PRODUCTS = [
         "name": "Camiseta Algodón Hombre",
         "price": 45000,
         "stock": 100,
-        "image": "https://placehold.co/200x200/fce4ec/333?text=T-Shirt",
+        "image": "https://placehold.co/200x200/fce4ec/333?text=Camiseta",
         "category": "Ropa",
     },
 ]

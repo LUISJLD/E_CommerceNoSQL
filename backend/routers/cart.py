@@ -3,6 +3,7 @@
 # POST   /api/cart/{user_id}              → agregar/actualizar item
 # DELETE /api/cart/{user_id}?productId=X  → eliminar item
 
+from datetime import datetime
 from urllib.parse import unquote
 from fastapi import APIRouter, HTTPException, Query, Response
 from pydantic import BaseModel
@@ -11,6 +12,9 @@ from config.database import get_db
 from config.cache import cache_aside, get_redis
 
 router = APIRouter(prefix="/cart", tags=["Cart"])
+
+# TTL de 2 días (48 horas = 172.800 segundos)
+CART_TTL_SECONDS = 172800
 
 
 class CartItemBody(BaseModel):
@@ -23,6 +27,13 @@ async def _invalidate(user_id: str):
     try:
         r = get_redis()
         await r.delete(f"cart:{user_id}")
+    except Exception:
+        pass
+
+
+async def _ensure_ttl_index(db):
+    try:
+        await db.cart.create_index("updatedAt", expireAfterSeconds=CART_TTL_SECONDS)
     except Exception:
         pass
 
@@ -49,10 +60,12 @@ async def get_cart(user_id: str, response: Response):
 async def add_to_cart(user_id: str, body: CartItemBody):
     db = get_db()
     user_id = unquote(user_id).lower()
+    now = datetime.utcnow()
 
     if body.qty is None or body.price is None:
         raise HTTPException(status_code=400, detail="Se requieren qty y price")
 
+    await _ensure_ttl_index(db)
     cart = await db.cart.find_one({"userId": user_id})
 
     if cart:
@@ -67,11 +80,15 @@ async def add_to_cart(user_id: str, body: CartItemBody):
                 "price": body.price,
             })
 
-        await db.cart.update_one({"userId": user_id}, {"$set": {"items": items}})
+        await db.cart.update_one(
+            {"userId": user_id},
+            {"$set": {"items": items, "updatedAt": now}}
+        )
     else:
         await db.cart.insert_one({
             "userId": user_id,
             "items": [{"productId": body.productId, "qty": body.qty, "price": body.price}],
+            "updatedAt": now,
         })
 
     await _invalidate(user_id)
@@ -85,13 +102,18 @@ async def remove_from_cart(
 ):
     db = get_db()
     user_id = unquote(user_id).lower()
+    now = datetime.utcnow()
 
     if not productId:
         raise HTTPException(status_code=400, detail="Falta el parámetro productId")
 
+    await _ensure_ttl_index(db)
     await db.cart.update_one(
         {"userId": user_id},
-        {"$pull": {"items": {"productId": productId}}},
+        {
+            "$pull": {"items": {"productId": productId}},
+            "$set": {"updatedAt": now}
+        },
     )
 
     await _invalidate(user_id)
